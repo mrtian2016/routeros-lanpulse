@@ -52,11 +52,8 @@
   <!-- 没配管理员密码: 直接关闭, 不给任何入口 -->
   <div class="card hide" id="disabled">
     <h2>设置页已关闭</h2>
-    <p class="note">
-      没有配置管理员密码，设置页处于关闭状态 —— 这是刻意的：不设默认密码，就不会有默认密码被扫到。<br>
-      要启用，在 <code>.env</code> 里设置 <code>ADMIN_PASSWORD</code> 后重启容器：
-    </p>
-    <pre class="note">ADMIN_PASSWORD=你的密码
+    <p class="note" data-i18n>没有配置管理员密码，设置页处于关闭状态 —— 这是刻意的：不设默认密码，就不会有默认密码被扫到。<br>要启用，在 <code>.env</code> 里设置 <code>ADMIN_PASSWORD</code> 后重启容器：</p>
+    <pre class="note">ADMIN_PASSWORD=your-password
 docker compose up -d</pre>
   </div>
 
@@ -71,14 +68,9 @@ docker compose up -d</pre>
 
   <div class="card hide" id="alerts">
     <h2>告警外发</h2>
-    <p class="note">
-      按 <code>[alerts]</code> 的配置往 Bark / Telegram 推送。密钥走环境变量
-      （<code>BARK_KEY</code>、<code>TELEGRAM_TOKEN</code>、<code>TELEGRAM_CHAT_ID</code>），不写在配置文件里。
-    </p>
+    <p class="note" data-i18n>按 <code>[alerts]</code> 的配置往 Bark / Telegram 推送。密钥走环境变量（<code>BARK_KEY</code>、<code>TELEGRAM_TOKEN</code>、<code>TELEGRAM_CHAT_ID</code>），不写在配置文件里。</p>
     <h3 style="font-size:13px;margin:14px 0 6px">分类型推送开关</h3>
-    <p class="note" style="margin:0 0 8px">
-      关掉的类型<b>仍然显示在面板上</b>，只是不推手机。改这里等同于改 <code>[alerts.kinds]</code>。
-    </p>
+    <p class="note" style="margin:0 0 8px" data-i18n>关掉的类型<b>仍然显示在面板上</b>，只是不推手机。改这里等同于改 <code>[alerts.kinds]</code>。</p>
     <div id="kinds"></div>
     <div class="row" style="margin-top:12px">
       <button class="btn ghost" id="btn-test">发一条测试通知</button>
@@ -88,10 +80,7 @@ docker compose up -d</pre>
 
   <div class="card hide" id="editor">
     <h2>config.toml <span class="hint" id="cfg-path"></span></h2>
-    <p class="note">
-      保存前会先校验 TOML 语法，语法不过就不会动磁盘上的文件；保存时旧版本会存成
-      <code>config.toml.bak</code>。改完即时生效，只有监听端口这类启动项需要重启容器。
-    </p>
+    <p class="note" data-i18n>保存前会先校验 TOML 语法，语法不过就不会动磁盘上的文件；保存时旧版本会存成 <code>config.toml.bak</code>。改完即时生效，只有监听端口这类启动项需要重启容器。</p>
     <textarea id="toml" spellcheck="false"></textarea>
     <div class="row" style="margin-top:10px">
       <button class="btn" id="btn-save">校验并保存</button>

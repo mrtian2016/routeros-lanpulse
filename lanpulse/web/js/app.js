@@ -1,5 +1,5 @@
 import { initTheme } from './theme.js';
-import { initI18n, t, applyLang, lang } from './i18n.js';
+import { initI18n, t, applyLang, lang, translateEvent as TE } from './i18n.js';
 
 const fmtUptime = sec => {
   const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600);
@@ -76,10 +76,14 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     lan: { x: 600, y: 250, w: 140, h: 56, name: '内网', sub: '192.168.1.0/24', core: true },
     wgg: { x: 60, y: 40, w: 0, h: 0, name: 'WireGuard peers', group: true },
     ovg: { x: 60, y: 460, w: 0, h: 0, name: 'OpenVPN 用户', group: true },
-    brg: { x: 830, y: 355, w: 0, h: 0, name: '分支站点', group: true },
-    tsg: { x: 830, y: 470, w: 0, h: 0, name: 'tailnet', group: true },
-    ing: { x: 830, y: 180, w: 0, h: 0, name: '入口 / 公网服务', group: true },
+    lang: { x: 775, y: 214, w: 0, h: 0, name: '内网 Top 设备', group: true },
+    brg: { x: 950, y: 355, w: 0, h: 0, name: '分支站点', group: true },
+    tsg: { x: 950, y: 470, w: 0, h: 0, name: 'tailnet', group: true },
+    ing: { x: 950, y: 180, w: 0, h: 0, name: '入口 / 公网服务', group: true },
   };
+  // 右侧那一列小节点的 x 跟着各自的组标签走。以前写死 840, 谁改了 CFG.topology
+  // 就会出现"标签在这边、节点在那边"。
+  const colX = (g, dx = 10) => (NODES[g] ? NODES[g].x : 950) + dx;
   const side = (n, s) => s === 'l' ? { x: n.x, y: n.y + n.h / 2 } : s === 'r' ? { x: n.x + n.w, y: n.y + n.h / 2 } : s === 't' ? { x: n.x + n.w / 2, y: n.y } : { x: n.x + n.w / 2, y: n.y + n.h };
   const svg = document.getElementById('map'), NS = 'http://www.w3.org/2000/svg';
   const el = (tag, attrs = {}, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
@@ -104,7 +108,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   addEdge('wan', CURVE(s_('internet', 'r'), s_('ros', 'l')), COLOR.wan, () => smooth('wan', wanD() + wanU()), [262, 292],
     () => `<div class="tt">Internet ↔ RouterOS (PPPoE)</div><b>↓ ${fmt(wanD())}</b> / <b>↑ ${fmt(wanU())}</b> Mbps<br><span class="d">${S.wan && S.wan.online ? '已连接' : '离线'}${S.wan && S.wan.ip ? ' · ' + S.wan.ip : ''}</span>`);
   addEdge('lan', CURVE(s_('ros', 'r'), s_('lan', 'l')), COLOR.wan, () => { const f = F(); return smooth('lan', f ? val(f.lan, 'down') + val(f.lan, 'up') : (S.lan && S.lan.devices || []).reduce((a, d) => a + d.down + d.up, 0)); }, [535, 238],
-    r => `<div class="tt">RouterOS ↔ 内网</div><b>${fmt(r)} Mbps</b><br><span class="d">${(S.lan && S.lan.clients) || 0} 台在线 (DHCP 租约)</span>`);
+    r => `<div class="tt">RouterOS ↔ 内网</div><b>${fmt(r)} Mbps</b><br><span class="d">${t('{n} 台在线 (DHCP 租约)', { n: (S.lan && S.lan.clients) || 0 })}</span>`);
   addEdge('dnat', CURVE(s_('ros', 'b'), s_('edge', 'l'), .35), COLOR.proxy, () => smooth('dnat', val(S.ingress, 'trojan') + val(S.ingress, 'https')), [470, 360],
     r => `<div class="tt">RouterOS → edge (dst-nat 32443/58443/3478)</div><b>${fmt(r)} Mbps</b><br><span class="d">公网入口转发</span>`);
   addEdge('wifi', CURVE(s_('lan', 't'), s_('unifi', 'b'), .5), COLOR.ts, () => smooth('wifi', (S.wifi || []).reduce((a, w) => a + (w.down || 0) + (w.up || 0), 0)), [660, 205],
@@ -121,17 +125,41 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       () => `<div class="tt">OpenVPN 服务端 · ${u.id}</div><b>↓ ${fmt(u.down)}</b> / <b>↑ ${fmt(u.up)}</b> Mbps`);
   });
   branches.forEach((b, i) => {
-    const y = 330 + i * 24; b.node = { x: 840, y, w: 110, h: 18 };
-    addEdge('br-' + b.id, CURVE(s_('edge', 'r'), { x: 840, y: y + 9 }, .5), COLOR.branch, () => b.online ? smooth('br' + b.id, b.down + b.up) : 0, [0, 0],
+    const y = 330 + i * 24; b.node = { x: colX('brg'), y, w: 110, h: 18 };
+    addEdge('br-' + b.id, CURVE(s_('edge', 'r'), { x: colX('brg'), y: y + 9 }, .5), COLOR.branch, () => b.online ? smooth('br' + b.id, b.down + b.up) : 0, [0, 0],
       () => `<div class="tt">分支隧道 · ${b.id}${b.dev ? ' (' + b.dev + ')' : ''}</div>${b.online ? `<b>↓ ${fmt(b.down)}</b> / <b>↑ ${fmt(b.up)}</b> Mbps<br><span class="d">对端 ${b.peer || '?'} · ${b.net}</span>${(b.nets||[]).length ? `<br><span class="d">承载: ${b.nets.join(' ')}</span>` : ''}` : `<span class="d">${b.net} · 中断</span>`}`);
   });
-  const tsNode = { id: 'tailnet', node: { x: 840, y: 470, w: 110, h: 18 }, online: true };
-  addEdge('ts', CURVE(s_('edge', 'b'), { x: 840, y: 479 }, .5), COLOR.ts, () => 0.02, [0, 0],
+  const tsNode = { id: 'tailnet', node: { x: colX('tsg'), y: 470, w: 110, h: 18 }, online: true };
+  addEdge('ts', CURVE(s_('edge', 'b'), { x: colX('tsg'), y: 479 }, .5), COLOR.ts, () => 0.02, [0, 0],
     () => `<div class="tt">tailnet (headscale)</div><span class="d">${(S.tailnet && S.tailnet.online) || 0}/${(S.tailnet && S.tailnet.nodes) || 0} 在线 · edge 发布子网路由</span><br>${((S.tailnet && S.tailnet.peers) || []).map(p => `<span style="opacity:${p.online ? 1 : .4}">${p.id}</span>`).join(' · ')}`);
   ingLabels.forEach((c, i) => {
-    const y = 190 + i * 24; c.node = { x: 840, y, w: 120, h: 18 };
-    addEdge('in-' + i, CURVE(s_('edge', 't'), { x: 840, y: y + 9 }, .6), COLOR.proxy, () => smooth('in' + i, val(S.ingress, c.k)), [0, 0],
+    const y = 190 + i * 24; c.node = { x: colX('ing'), y, w: 120, h: 18 };
+    addEdge('in-' + i, CURVE(s_('edge', 't'), { x: colX('ing'), y: y + 9 }, .6), COLOR.proxy, () => smooth('in' + i, val(S.ingress, c.k)), [0, 0],
       r => `<div class="tt">入口 · ${c.id}</div><b>${fmt(r)} Mbps</b>`);
+  });
+
+  // 内网 Top 设备。地图上原本一条粗线进"内网"就断了 —— 看得见内网在跑 150 Mbps,
+  // 看不见是谁在跑。速率取 ROS kid-control 的实时值(和"内网设备流量"面板同源),
+  // 不用 NetFlow: 那是 5 分钟平均, 下载刚起来时会低得离谱。
+  const LTW = 150, LTH = 20, LTGAP = 26;
+  if (!NODES.lang) {
+    // 已有的小节点(分支/入口/tailnet)此时都已排好, 直接取它们和主节点的最右边界。
+    const boxes = [...Object.values(NODES).map(n => ({ x: n.x, w: n.w || 0 })),
+                   ...branches.map(b => b.node), ...ingLabels.map(c => c.node), tsNode.node];
+    const right = Math.max(...boxes.map(b => b.x + b.w));
+    const lan = NODES.lan || { x: right, y: 250, h: 56 };
+    NODES.lang = { x: right + 40, y: lan.y + lan.h / 2 - (5 * LTGAP) / 2, w: 0, h: 0,
+                   name: '内网 Top 设备', group: true };
+  }
+  const LAN_TOP = Array.from({ length: 5 }, (_, i) => ({
+    i, name: '', down: 0, up: 0,
+    node: { x: NODES.lang.x, y: NODES.lang.y + 8 + i * LTGAP, w: LTW, h: LTH },
+  }));
+  LAN_TOP.forEach(d => {
+    addEdge('lt-' + d.i, CURVE(s_('lan', 'r'), { x: d.node.x, y: d.node.y + d.node.h / 2 }, .5),
+      COLOR.wan, () => d.name ? smooth('lt' + d.i, d.down + d.up) : 0, [0, 0],
+      () => d.name ? `<div class="tt">${H(d.name)}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps`
+                   : `<span class="d">${t('暂无数据')}</span>`);
   });
 
   const drawNode = (n, cls = 'node') => {
@@ -152,15 +180,32 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     return g;
   };
   Object.values(NODES).forEach(n => { if (!n.group) drawNode(n); });
-  groupLabel(NODES.wgg.x, NODES.wgg.y - 8, 'WireGuard peers', COLOR.wg);
-  groupLabel(NODES.ovg.x, NODES.ovg.y - 6, 'OpenVPN 用户', COLOR.ovpn);
-  groupLabel(NODES.brg.x, NODES.brg.y - 8, '分支站点', COLOR.branch);
-  groupLabel(NODES.tsg.x, NODES.tsg.y - 4, 'tailnet', COLOR.ts);
-  groupLabel(NODES.ing.x, NODES.ing.y - 8, '入口 / 公网服务', COLOR.proxy);
+  // 组标签贴着该组第一个节点的上沿, 而不是取组节点自己的 y。两者对不上时标签会被
+  // 节点盖住 —— "分支站点" 以前就只露出一个 "分" 字。顺带: 空组不再画孤零零的标签。
+  const groupTag = (g, boxes, text, color) => {
+    const first = boxes[0]; if (!first) return;
+    groupLabel(NODES[g] ? NODES[g].x : first.x, first.y - 6, text, color);
+  };
+  groupTag('wgg', wgPeers.map(p => p.node), 'WireGuard peers', COLOR.wg);
+  groupTag('ovg', ovpnUsers.map(u => u.node), 'OpenVPN 用户', COLOR.ovpn);
+  groupTag('brg', branches.map(b => b.node), '分支站点', COLOR.branch);
+  groupTag('tsg', [tsNode.node], 'tailnet', COLOR.ts);
+  groupTag('ing', ingLabels.map(c => c.node), '入口 / 公网服务', COLOR.proxy);
+  groupTag('lang', LAN_TOP.map(d => d.node), '内网 Top 设备', COLOR.wan);
   wgPeers.forEach(p => peerNode(p, COLOR.wg, p.id, () => `<div class="tt">${p.id}</div><span class="d">${p.ip} · ${p.online ? '在线' : '离线'}</span>`));
   ovpnUsers.forEach(u => peerNode(u, COLOR.ovpn, u.id, () => `<div class="tt">${u.id}</div><span class="d">OpenVPN 服务端用户</span>`));
   branches.forEach(b => peerNode(b, COLOR.branch, b.id + ' ' + (b.net || ''), () => `<div class="tt">${b.id}</div><span class="d">${b.net}</span>`));
-  peerNode(tsNode, COLOR.ts, 'tailnet 节点', () => `<div class="tt">tailnet</div><span class="d">${(S.tailnet && S.tailnet.online) || 0}/${(S.tailnet && S.tailnet.nodes) || 0} 在线</span>`);
+  LAN_TOP.forEach(d => {
+    const g = el('g', { class: 'node small' }, nodesLayer), n = d.node;
+    el('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 4 }, g);
+    d.nameEl = el('text', { x: n.x + 8, y: n.y + n.h / 2 + 3, class: 'sub' }, g);
+    d.rateEl = el('text', { x: n.x + n.w - 8, y: n.y + n.h / 2 + 3, class: 'sub', 'text-anchor': 'end' }, g);
+    d.g = g;
+    g.addEventListener('mousemove', ev => d.name && showTip(ev,
+      `<div class="tt">${H(d.name)}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps`));
+    g.addEventListener('mouseleave', hideTip);
+  });
+  peerNode(tsNode, COLOR.ts, t('tailnet 节点'), () => `<div class="tt">tailnet</div><span class="d">${t('{n}/{m} 在线', { n: (S.tailnet && S.tailnet.online) || 0, m: (S.tailnet && S.tailnet.nodes) || 0 })}</span>`);
   ingLabels.forEach(c => peerNode(c, COLOR.proxy, c.id, () => {
     const rows = (S.ingress_detail || []).filter(r =>
       c.k === 'trojan' ? (r.type === 'trojan' || r.type === 'anytls') : (c.k === 'https' ? r.type === 'http' : false));
@@ -169,6 +214,17 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       `<span class="d">${H(r.type)} :${H(r.port)} · ${r.conns} 连接 · ↓${fmt(r.rx)} / ↑${fmt(r.tx)} Mbps</span>`).join('<br>');
     return h;
   }));
+
+  // viewBox 按实际画出来的东西算。写死 980x560 的话, peer 一多就被切,
+  // 换个 topology 更是直接跑出画布。
+  (() => {
+    const boxes = [...Object.values(NODES).filter(n => !n.group).map(n => ({ x: n.x, y: n.y, w: n.w, h: n.h })),
+                   ...wgPeers.map(p => p.node), ...ovpnUsers.map(u => u.node),
+                   ...branches.map(b => b.node), ...ingLabels.map(c => c.node),
+                   tsNode.node, ...LAN_TOP.map(d => d.node)];
+    const maxX = Math.max(...boxes.map(b => b.x + b.w)), maxY = Math.max(...boxes.map(b => b.y + b.h));
+    svg.setAttribute('viewBox', `0 0 ${Math.ceil(maxX + 30)} ${Math.ceil(maxY + 30)}`);
+  })();
 
   // ---------- 事件流 ----------
   const feed = document.getElementById('feed');
@@ -183,11 +239,11 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     box.classList.toggle('hide', bad.length === 0);
     if (!bad.length) return;
     const list = healthCollapsed ? '' : `<ul>${bad.map(h => `<li>
-        <span class="lbl">${H(h.label)}</span>
-        <span class="hint">${H(h.hint)}${h.doc ? ` · <a href="${REPO}${H(h.doc)}" target="_blank" rel="noreferrer">查看文档</a>` : ''}</span>
+        <span class="lbl">${H(TE(h.label))}</span>
+        <span class="hint">${H(TE(h.hint))}${h.doc ? ` · <a href="${REPO}${H(h.doc)}" target="_blank" rel="noreferrer">${t('查看文档')}</a>` : ''}</span>
       </li>`).join('')}</ul>`;
-    box.innerHTML = `<h3>⚠ ${bad.length} 项数据源没通
-        <button id="health-toggle">${healthCollapsed ? '展开' : '收起'}</button></h3>${list}`;
+    box.innerHTML = `<h3>⚠ ${t('{n} 项数据源没通', { n: bad.length })}
+        <button id="health-toggle">${healthCollapsed ? t('展开') : t('收起')}</button></h3>${list}`;
     document.getElementById('health-toggle').onclick = () => {
       healthCollapsed = !healthCollapsed;
       localStorage.setItem('lanpulse.health.collapsed', healthCollapsed ? '1' : '0');
@@ -284,7 +340,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       tempTag(p.querySelector('.hero .tag'), h.cpu || 0, 80, 90);
       const hi = h.info || {}, hc = hi.cpu || {};
       const rows = [kvRow(hc.model || 'CPU',
-        `${hc.cores ? hc.cores + ' 核 ' : ''}${hc.threads || '?'} 线程 · ${(hi.ram || 0).toFixed(0)}G`,
+        (hc.cores ? t('{n} 核', { n: hc.cores }) + ' ' : '') + t('{n} 线程', { n: hc.threads || '?' }) + ` · ${(hi.ram || 0).toFixed(0)}G`,
         100, 'var(--text-muted)')];
       (hi.disks || []).slice(0, 5).forEach(d => rows.push(kvRow(d.model, `${d.size} ${d.kind}`, 100, 'var(--text-muted)')));
       (h.storage || []).forEach(x => rows.push(useRow(`${t('存储')} ${x.name}`, x)));
@@ -294,7 +350,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       if (h.dimm) rows.push(kvRow('DIMM A1', h.dimm.toFixed(0) + ' °C', h.dimm, tcolor(h.dimm, 75, 85)));
       if (h.nvme !== undefined) {
         rows.push(kvRow('NVMe 温度', (h.nvme || 0).toFixed(0) + ' °C', h.nvme, tcolor(h.nvme, 70, 80)));
-        rows.push(kvRow('NVMe 寿命已用' + (h.nvme_hours ? ` · 通电 ${(h.nvme_hours / 8760).toFixed(1)} 年` : ''),
+        rows.push(kvRow(t('NVMe 寿命已用') + (h.nvme_hours ? ' · ' + t('通电 {n} 年', { n: (h.nvme_hours / 8760).toFixed(1) }) : ''),
           (h.nvme_pct || 0).toFixed(0) + '%', h.nvme_pct, tcolor(h.nvme_pct || 0, 60, 85)));
       }
       if (h.load !== undefined) rows.push(kvRow('宿主机 load1', (h.load || 0).toFixed(2), (h.load || 0) * 12, 'var(--good)'));
@@ -308,7 +364,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
             `<div class="core">${H(v.name)}<b style="background:${tcolor(v.cpu, 60, 85)};width:${Math.min(100, v.cpu)}%"></b><i>${v.cpu}%</i></div>`).join('')
         : '';
       p.querySelector('.sel').innerHTML = h.bmc
-        ? `<li><span class="t">BMC</span><span>${H(h.bmc)} · ipmi 采集正常</span></li>` : '';
+        ? `<li><span class="t">BMC</span><span>${H(h.bmc)} · ${t('ipmi 采集正常')}</span></li>` : '';
     });
   }
 
@@ -341,7 +397,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     document.getElementById('nas-vol').textContent = (n.temp || 0).toFixed(0);
     tempTag(document.getElementById('nas-tag'), bad ? 99 : (n.temp || 0), 60, 70);
     document.getElementById('nas-kv').innerHTML = [
-      kvRow('系统温度', (n.temp || 0).toFixed(0) + ' °C', n.temp, tcolor(n.temp, 55, 65)),
+      kvRow(t('系统温度'), (n.temp || 0).toFixed(0) + ' °C', n.temp, tcolor(n.temp, 55, 65)),
       ...(n.model ? [kvRow('型号', n.model, 100, 'var(--text-muted)')] : []),
       ...(n.raid || []).map(r => kvRow(r.name, r.ok ? '正常' : '异常', 100, r.ok ? 'var(--good)' : 'var(--bad)')),
     ].join('');
@@ -351,7 +407,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     const f = F(), ss = (f && f.ovpn_sessions) || [];
     const hint = document.getElementById('ov-hint');
     const port = S.ovpn_port ? ' :' + S.ovpn_port : '';    // 端口来自 ROS, 不写死
-    if (hint) hint.textContent = `{服务端}${port} · ${ss.length} 个会话 · 一对端一账号`.replace('{服务端}', t('服务端'));
+    if (hint) hint.textContent = t('服务端') + port + ' · ' + t('{n} 个会话 · 一对端一账号', { n: ss.length });
     // 速率按用户名对到 <ovpn-用户名> 这个 ROS 动态接口上。
     // 这一列以前渲染的是加密方式(表头却写着 ↓/↑ Mbps) —— 速率根本没接。
     const rateOf = user => {
@@ -370,7 +426,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   function renderTailnet() {
     const tn = S.tailnet || {}, ps = tn.peers || [];
     const hint = document.getElementById('ts-hint');
-    if (hint) hint.textContent = `headscale · ${tn.online || 0}/${tn.nodes || 0} 在线`;
+    if (hint) hint.textContent = 'headscale · ' + t('{n}/{m} 在线', { n: tn.online || 0, m: tn.nodes || 0 });
     const dup = {}; ps.forEach(p => dup[p.id] = (dup[p.id] || 0) + 1);
     document.querySelector('#ts-table tbody').innerHTML = ps.length ? ps.map(p => {
       const name = H(p.id) + (dup[p.id] > 1 && p.ip ? ` <span class="d">(${H(p.ip.split('.').pop())})</span>` : '');
@@ -387,7 +443,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     }
     const w = S.wifi || [], r24 = (S.radios || []).find(x => x.band === '2.4G') || {}, r5 = (S.radios || []).find(x => x.band === '5G') || {};
     const uw = document.querySelector('#wifi-table').closest('.panel').querySelector('.util');
-    const bar = (r, color) => r ? `<div><div class="lbl"><span>${r.band} · ch ${r.ch} · <b>${r.clients || 0}</b> 台</span><span>${r.util}%</span></div><div class="g"><i style="width:${Math.max(2, Math.min(100, r.util))}%;background:${color}"></i></div></div>` : '';
+    const bar = (r, color) => r ? `<div><div class="lbl"><span>${r.band} · ch ${r.ch} · <b>${r.clients || 0}</b> ${t('台')}</span><span>${r.util}%</span></div><div class="g"><i style="width:${Math.max(2, Math.min(100, r.util))}%;background:${color}"></i></div></div>` : '';
     if (uw) uw.innerHTML = bar(r24, 'var(--s-ovpn)') + bar(r5, 'var(--s-wan)');
     document.querySelector('#wifi-table tbody').innerHTML = w.map(x => `<tr><td>${H(x.name)}</td><td>${x.band || '—'}</td><td>${rssiBar(x.rssi || -99)}</td><td>${fmt(x.down)}</td><td>${fmt(x.up)}</td><td class="d">${x.sat != null ? x.sat + '%' : '—'}</td></tr>`).join('');
   }
@@ -409,15 +465,28 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     });
   }
 
+  // 后端给的是 PromQL 的 rate 窗口写法 ("30s"/"1m"/"5m"), 翻成读得懂的均值说明。
+  function winLabel(w) {
+    const m = /^(\d+)([smh])$/.exec(w || '');
+    if (!m) return '';
+    const n = +m[1];
+    return m[2] === 's' ? t('{n} 秒均值', { n }) : m[2] === 'h' ? t('{n} 小时均值', { n }) : t('{n} 分钟均值', { n });
+  }
+
   function drawHist() {
     const rs = (CFG.hist_ranges || []).find(r => r.k === HIST_RANGE);
     const hint = document.getElementById('hist-hint');
-    if (hint && rs) hint.textContent = `${rs.step < 60 ? rs.step + ' 秒' : rs.step / 60 + ' 分钟'}${t('粒度')} · ${t('悬停看数值')}`;
+    if (hint && rs) hint.textContent =
+      (rs.step < 60 ? t('{n} 秒粒度', { n: rs.step }) : t('{n} 分钟粒度', { n: rs.step / 60 }))
+      + ` · ${t('悬停看数值')}`;
     hist.innerHTML = '';
-    // 坐标要用 viewBox 的用户坐标系。原来用 hist.clientWidth 算 x, 而 SVG 上写着
-    // viewBox="0 0 1200 170" + preserveAspectRatio="none", 两者不等时整条曲线会被横向压缩。
-    const vb = (hist.getAttribute('viewBox') || '0 0 1200 170').split(/\s+/).map(Number);
-    const W = vb[2] || 1200, Hh = vb[3] || 170, L = 34, R = 8, T = 10, B = 22;
+    // viewBox 必须等于元素的真实像素尺寸。之前写死 viewBox="0 0 1200 170" 配
+    // preserveAspectRatio="none", 容器一旦不是 1200 宽, 整幅图 —— 连同坐标轴上的
+    // 文字 —— 就被非等比拉伸。让 1 用户单位 = 1 CSS px 就没有缩放可言了。
+    const W = Math.max(320, Math.round(hist.clientWidth || 1200));
+    const Hh = Math.max(120, Math.round(hist.clientHeight || 170));
+    hist.setAttribute('viewBox', `0 0 ${W} ${Hh}`);
+    const L = 34, R = 8, T = 10, B = 22;
     const pts = HIST.down || [];
     if (!pts.length) {
       const t0 = el('text', { x: W / 2, y: Hh / 2, 'text-anchor': 'middle', class: 'sub' }, hist);
@@ -431,7 +500,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     [0, .25, .5, .75, 1].forEach(f => el('line', { x1: L, x2: W - R, y1: y(max * f), y2: y(max * f) }, g));
     const ax = el('g', { class: 'axis' }, hist);
     [0, .5, 1].forEach(f => { const t1 = el('text', { x: 4, y: y(max * f) + 3 }, ax); t1.textContent = (max * f).toFixed(0); });
-    const step = Math.ceil(pts.length / 6);
+    const step = Math.ceil(pts.length / Math.max(4, Math.min(12, Math.floor(W / 110))));
     pts.forEach((p, i) => {
       if (i % step) return;
       const t2 = el('text', { x: x(i), y: Hh - 6, 'text-anchor': 'middle' }, ax);
@@ -463,7 +532,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       const ts = new Date(pts[i][0] * 1000);
       showTip(ev, `<div class="tt">${ts.toLocaleString()}</div>`
         + `<b>↓ ${fmt(pts[i][1])}</b> / <b>↑ ${fmt(u ? u[1] : 0)}</b> Mbps`
-        + `<br><span class="d">${t('5 分钟均值')}</span>`);
+        + `<br><span class="d">${winLabel(HIST.win || (rs && rs.win))}</span>`);
     };
     hit.addEventListener('mousemove', ev => {
       // 用 SVG 自己的坐标反算, 别用像素 —— 元素宽度和 viewBox 宽度不是一回事
@@ -481,7 +550,8 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   function renderSankey() {
     const f = S.flows;
     skWrap.innerHTML = '';
-    if (!f || !f.sources.length) { const t = el('text', { x: 300, y: 120, class: 'sub' }, skWrap); t.textContent = f ? '窗口内暂无流量样本…' : 'NetFlow 收集器未就绪'; return; }
+    if (!f || !f.sources.length) { const tx = el('text', { x: 300, y: 120, class: 'sub' }, skWrap);
+      tx.textContent = t(f ? '窗口内暂无流量样本…' : 'NetFlow 收集器未就绪'); return; }
     // 坐标必须用 viewBox 的用户坐标系 (SVG 里写死了 viewBox), 不能用像素宽度
     const vb = (skWrap.getAttribute('viewBox') || '0 0 560 260').split(/\s+/).map(Number);
     const W = vb[2] || 560, Hh = vb[3] || 260, pad = 14, MINH = 8, narrow = innerWidth < 640, lab = narrow ? 70 : 132, L = lab, R = Math.max(lab + 60, W - lab - 6), cut = narrow ? 9 : 17;
@@ -507,19 +577,23 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       const y1 = a.y + a.off + ha / 2, y2 = b.y + b.off + hb / 2; a.off += ha; b.off += hb;
       const mx = (L + R) / 2;
       const p = el('path', { d: `M${L},${y1} C${mx},${y1} ${mx},${y2} ${R},${y2}`, fill: 'none', stroke: b.c, 'stroke-width': Math.max(1, (ha + hb) / 2), opacity: .38 }, skWrap);
-      p.addEventListener('mousemove', ev => showTip(ev, `<div class="tt">${l.src} → ${l.dst}</div><b>${fmt(l.v)} Mbps</b><br><span class="d">最近 ${(f.window / 60) | 0} 分钟均值</span>`));
+      p.addEventListener('mousemove', ev => showTip(ev, `<div class="tt">${H(t(l.src))} → ${H(t(l.dst))}</div><b>${fmt(l.v)} Mbps</b><br><span class="d">${t('最近 {n} 分钟均值', { n: (f.window / 60) | 0 })}</span>`));
       p.addEventListener('mouseleave', hideTip);
     });
+    const clip = s2 => s2.length > cut ? s2.slice(0, cut - 1) + '…' : s2;
     srcs.forEach(x => { el('rect', { x: L - 6, y: sp[x.id].y, width: 6, height: sp[x.id].h, fill: 'var(--text-muted)' }, skWrap);
-      const t = el('text', { x: L - 12, y: sp[x.id].y + sp[x.id].h / 2 + 3, 'text-anchor': 'end', class: 'sub' }, skWrap); t.textContent = `${x.id.length > cut ? x.id.slice(0, cut - 1) + '…' : x.id} ${fmt(x.v)}`; });
+      const tx = el('text', { x: L - 12, y: sp[x.id].y + sp[x.id].h / 2 + 3, 'text-anchor': 'end', class: 'sub' }, skWrap);
+      tx.textContent = `${clip(t(x.id))} ${fmt(x.v)}`; });
     dsts.forEach(x => { el('rect', { x: R, y: dp[x.id].y, width: 6, height: dp[x.id].h, fill: dp[x.id].c }, skWrap);
-      const t = el('text', { x: R + 12, y: dp[x.id].y + dp[x.id].h / 2 + 3, class: 'sub' }, skWrap); t.textContent = `${x.id.length > cut ? x.id.slice(0, cut - 1) + '…' : x.id} ${fmt(x.v)}`; });
+      const tx = el('text', { x: R + 12, y: dp[x.id].y + dp[x.id].h / 2 + 3, class: 'sub' }, skWrap);
+      tx.textContent = `${clip(t(x.id))} ${fmt(x.v)}`; });
   }
 
   // ---------- 主循环 ----------
-  let wanMax = 0;
+  let wanMax = 0, wanUpMax = 0;
+  const EDGE_LABEL = (CFG.edge && CFG.edge.label) || 'edge';   // 主机名来自配置, 不写死
   function render() {
-    if (!S.ready) { document.getElementById('t-wan-down').innerHTML = '—<small>后端未就绪</small>'; return; }
+    if (!S.ready) { document.getElementById('t-wan-down').innerHTML = `—<small>${t('后端未就绪')}</small>`; return; }
     // 实体值更新
     const byId = (arr, id) => (arr || []).find(x => x.id === id) || {};
     const f = F();
@@ -530,15 +604,31 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       u.down = q2 ? q2.down : (n.down || 0); u.up = q2 ? q2.up : (n.up || 0); });
     branches.forEach(b => { const n = byId(S.branches, b.id); b.online = n.online; b.down = n.down || 0; b.up = n.up || 0; b.hist.push(b.online ? b.down + b.up : 0); b.hist.shift(); });
     const wd = wanD(), wu = wanU();
-    wanMax = Math.max(wanMax, wd);
+    wanMax = Math.max(wanMax, wd); wanUpMax = Math.max(wanUpMax, wu);
     document.getElementById('t-wan-down').innerHTML = `${fmt(wd)}<small>Mbps</small>`;
-    document.getElementById('t-wan-down-max').textContent = fmt(wanMax);
     document.getElementById('t-wan-up').innerHTML = `${fmt(wu)}<small>Mbps</small>`;
+    document.getElementById('t-wan-down-d').textContent = t('峰值 {n} Mbps', { n: fmt(wanMax) });
+    document.getElementById('t-wan-up-d').textContent = t('峰值 {n} Mbps', { n: fmt(wanUpMax) });
     const nWg = wgPeers.filter(p => p.online).length, nTs = (S.tailnet && S.tailnet.online) || 0;
     document.getElementById('t-remote').innerHTML = `${nWg + ovpnUsers.length + nTs}<small>设备</small>`;
     document.getElementById('t-remote-d').textContent = `WG ${nWg} · OpenVPN ${ovpnUsers.length} · tailnet ${nTs}`;
+    // 地图右侧的内网 Top 设备槽位。名字可能变长, 按节点宽度截断而不是写死字数。
+    const lanDevs = ((S.lan && S.lan.devices) || []).slice()
+      .sort((a, b2) => (b2.down + b2.up) - (a.down + a.up));
+    LAN_TOP.forEach((d, i) => {
+      const src = lanDevs[i];
+      d.name = src ? src.name : ''; d.down = src ? src.down : 0; d.up = src ? src.up : 0;
+      d.g.setAttribute('opacity', src ? 1 : 0);
+      if (!src) return;
+      const nm = d.name.length > 15 ? d.name.slice(0, 14) + '…' : d.name;
+      if (d.nameEl.textContent !== nm) d.nameEl.textContent = nm;
+      d.rateEl.textContent = fmt(d.down + d.up);
+    });
     const nBr = branches.filter(b => b.online).length;
-    document.getElementById('t-branch').innerHTML = `${nBr}<small>/ ${branches.length} 在线</small>`;
+    document.getElementById('t-branch').innerHTML = `${nBr}<small>${t('/ {n} 在线', { n: branches.length })}</small>`;
+    document.getElementById('t-branch-d').textContent = t('{host} 上的 OpenVPN 客户端', { host: EDGE_LABEL });
+    const brh = document.getElementById('br-hint');
+    if (brh) brh.textContent = t('{host} 上的 {n} 条 OpenVPN', { host: EDGE_LABEL, n: branches.length });
     (S.ingress_meta || []).forEach(m => {
       const c = ingLabels.find(x => x.k === m.k); if (!c) return;
       c.label = m.id;   // 后端已给出短标签; 端口清单在悬浮提示里, 拼上去会溢出节点框
@@ -551,7 +641,8 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       `${fmt(ingMbps)} Mbps · ` + ((S.ingress_meta || []).map(m => m.id).join(' / ') || 'trojan / anytls / HTTPS');
     const t24 = (S.radios || []).reduce((a, r) => a + (+r.clients || 0), 0);
     document.getElementById('t-clash').innerHTML = `${t24}<small>无线客户端</small>`;
-    document.getElementById('t-clash-n').textContent = (S.lan && S.lan.clients) || 0;
+    document.getElementById('t-clash-d').textContent =
+      t('内网 DHCP · {n} 台设备', { n: (S.lan && S.lan.clients) || 0 });
     const tn = S.tailnet || {};
     document.getElementById('t-remote-d').textContent = `WG ${wgPeers.filter(p => p.online).length} · OpenVPN ${ovpnUsers.length} · tailnet ${tn.online || 0}/${tn.nodes || 0}`;
     EDGES.forEach(e => { const r = e.rateFn(); e.last = r; e.rate = r; e.p.setAttribute('stroke-width', r <= 0.01 ? 1 : (1.2 + Math.log10(1 + r) * 2.2).toFixed(2)); e.p.classList.toggle('idle', r <= 0.01); });

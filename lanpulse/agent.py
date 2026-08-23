@@ -470,7 +470,7 @@ def history(rng=DEFAULT_RANGE):
     c = _hist.setdefault(rng, {"ts": 0.0, "data": {}})
     if c["data"] and time.time() - c["ts"] < max(10, step / 2):
         return c["data"]
-    d = {"range": rng, "step": step, "span": span,
+    d = {"range": rng, "step": step, "span": span, "win": win,
          "down": qrange(f'rate(mktxp_interface_rx_byte_total{{name="{WANIF}"}}[{win}])', span, step),
          "up":   qrange(f'rate(mktxp_interface_tx_byte_total{{name="{WANIF}"}}[{win}])', span, step)}
     c.update(ts=time.time(), data=d)
@@ -1171,8 +1171,9 @@ def ui_config():
                    "unifi": bool(CFG["unifi"].get("enabled")), "netflow": bool(CFG["netflow"].get("enabled"))},
         "nas": {"title": CFG["nas"].get("title", "NAS"), "hint": CFG["nas"].get("hint", "")},
         "router": {"label": RT.get("label", "RouterOS")},
+        "edge": {"label": ED.get("label", "edge")},
         "pve_mem_total": PV.get("memory_total_gb", 32),
-        "hist_ranges": [{"k": k, "step": v[1]} for k, v in HIST_RANGES.items()],
+        "hist_ranges": [{"k": k, "step": v[1], "win": v[2]} for k, v in HIST_RANGES.items()],
         "hist_default": DEFAULT_RANGE,
         "redact": bool(CFG["redact"].get("enabled")),
     }

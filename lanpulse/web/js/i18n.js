@@ -21,7 +21,13 @@ let LANG = localStorage.getItem(KEY) || (navigator.language.startsWith('zh') ? '
 const originals = new WeakMap();   // 事件列表每秒重建, 用 WeakMap 免得攒垃圾
 
 export const lang = () => LANG;
-export const t = (s) => (LANG === 'en' && UI[s] ? UI[s] : s);
+// p 是占位符表: t('{n} 分钟均值', {n: 5})。带数字的句子必须整句进词典,
+// 拆成 “分钟均值” + 数字拼接的话, 英文语序 ("5-minute average") 就拼不出来。
+export const t = (s, p) => {
+  let out = (LANG === 'en' && UI[s]) ? UI[s] : s;
+  if (p) for (const k in p) out = out.split('{' + k + '}').join(p[k]);
+  return out;
+};
 
 // 事件文案是后端拼出来的句子 (模板 + 设备名), 没法整句查表, 所以按短语替换。
 // 设备名/IP 不在表里, 会原样保留 —— 这正是想要的。
@@ -34,13 +40,39 @@ export function translateEvent(text) {
   return out.replace(/\s*条(?=[\s→]|$)/g, '').replace(/\s{2,}/g, ' ').trim();
 }
 
+// 带 data-i18n 的元素整块翻译 innerHTML。
+// 原因: 说明性文字里常夹着 <code> 标签, 逐文本节点翻译会被切成"按"、"里设置"
+// 这种没法翻的碎片。整块查表则以完整句子为单位, 译文里也能保留标记。
+function walkBlocks(root) {
+  for (const el of root.querySelectorAll('[data-i18n]')) {
+    if (!originals.has(el)) originals.set(el, el.innerHTML);
+    const raw = originals.get(el);
+    const key = raw.trim().replace(/\s+/g, ' ');
+    el.innerHTML = (LANG === 'en' && UI[key]) ? UI[key] : raw;
+  }
+}
+
+// placeholder / title / aria-label 这些属性里也有文案, TreeWalker 只看文本节点, 看不到它们。
+const ATTRS = ['placeholder', 'title', 'aria-label'];
+const attrOrig = new WeakMap();
+function walkAttrs(root) {
+  for (const el of root.querySelectorAll('[placeholder],[title],[aria-label]')) {
+    let o = attrOrig.get(el);
+    if (!o) { o = {}; for (const a of ATTRS) { const v = el.getAttribute(a); if (v) o[a] = v; } attrOrig.set(el, o); }
+    for (const a in o) el.setAttribute(a, (LANG === 'en' && UI[o[a]]) ? UI[o[a]] : o[a]);
+  }
+}
+
+const TITLE0 = document.title;
+
 function walk(root) {
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const nodes = [];
   for (let n = w.nextNode(); n; n = w.nextNode()) nodes.push(n);
   for (const n of nodes) {
-    // 事件正文 (.m) 走短语翻译, 其余走整串查表
     const par = n.parentElement;
+    if (par && par.closest('[data-i18n]')) continue;   // 整块翻译的子树不再逐节点处理
+    // 事件正文 (.m) 走短语翻译, 其余走整串查表
     if (par && par.classList.contains('m')) {
       if (!originals.has(n)) originals.set(n, n.nodeValue);
       n.nodeValue = translateEvent(originals.get(n));
@@ -59,6 +91,9 @@ function walk(root) {
 }
 
 export function applyLang() {
+  document.title = (LANG === 'en' && UI[TITLE0]) ? UI[TITLE0] : TITLE0;
+  walkBlocks(document.body);
+  walkAttrs(document.body);
   walk(document.body);
   document.documentElement.lang = LANG === 'en' ? 'en' : 'zh-CN';
 }

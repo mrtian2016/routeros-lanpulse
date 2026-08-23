@@ -3,7 +3,6 @@
   "ui": {
     "WAN 下行": "WAN down",
     "WAN 上行": "WAN up",
-    "PPPoE · 峰值": "PPPoE · peak",
     "远程接入": "Remote access",
     "设备": "Device",
     "分支隧道": "Branch tunnels",
@@ -71,10 +70,9 @@
     "信号": "Signal",
     "设备去向 · NetFlow": "Device destinations · NetFlow",
     "近 5 分钟 · 带宽 = 流量": "last 5 min · width = volume",
-    "窗口内暂无流量样本…": "no flow samples in window…",
+    "窗口内暂无流量样本…": "No traffic samples in this window…",
     "NetFlow 收集器未就绪": "NetFlow collector not ready",
     "WAN 24 小时": "WAN 24 h",
-    "5 分钟粒度 · 悬停看数值": "5-min resolution · hover for values",
     "下行": "Down",
     "上行": "Up",
     "流量突发": "traffic burst",
@@ -92,7 +90,6 @@
     "服务端": "server",
     "当前无拨入会话": "no active dial-in sessions",
     "暂无 24 小时数据": "no 24 h data yet",
-    "5 分钟均值": "5-minute average",
     "粒度": " resolution",
     "悬停看数值": "hover for values",
     "WAN 流量": "WAN traffic",
@@ -100,7 +97,82 @@
     "1 小时": "1 h",
     "12 小时": "12 h",
     "秒": "s",
-    "分钟": "min"
+    "分钟": "min",
+    "● 实时 · Prometheus": "● Live · Prometheus",
+    "中文 / English": "English / 中文",
+    "亮色 / 暗色": "Light / dark",
+    "网络流量流向图": "Network traffic flow map",
+    "峰值 {n} Mbps": "Peak {n} Mbps",
+    "/ {n} 在线": "/ {n} online",
+    "{host} 上的 OpenVPN 客户端": "OpenVPN clients on {host}",
+    "{host} 上的 {n} 条 OpenVPN": "{n} OpenVPN tunnels on {host}",
+    "内网 DHCP · {n} 台设备": "LAN DHCP · {n} devices",
+    "内网 Top 设备": "Top LAN devices",
+    "暂无数据": "No data",
+    "{n} 秒粒度": "{n}s resolution",
+    "{n} 分钟粒度": "{n}-minute resolution",
+    "{n} 秒均值": "{n}-second average",
+    "{n} 分钟均值": "{n}-minute average",
+    "{n} 小时均值": "{n}-hour average",
+    "最近 {n} 分钟均值": "Average over the last {n} min",
+    "pve-exporter · 内存按配置值": "pve-exporter · memory from config",
+    "°C 系统温度": "°C system temp",
+    "lanpulse · 设置": "lanpulse · Settings",
+    "← 返回面板": "← Back to dashboard",
+    "退出登录": "Sign out",
+    "设置页已关闭": "Settings disabled",
+    "没有配置管理员密码，设置页处于关闭状态 —— 这是刻意的：不设默认密码，就不会有默认密码被扫到。<br>要启用，在 <code>.env</code> 里设置 <code>ADMIN_PASSWORD</code> 后重启容器：": "No admin password is set, so the settings page is closed. This is deliberate: with no default password, there is no default password to be scanned for.<br>To enable it, set <code>ADMIN_PASSWORD</code> in <code>.env</code> and restart the container:",
+    "登录": "Sign in",
+    "管理员密码": "Admin password",
+    "登录失败": "Sign-in failed",
+    "告警外发": "Alert delivery",
+    "按 <code>[alerts]</code> 的配置往 Bark / Telegram 推送。密钥走环境变量（<code>BARK_KEY</code>、<code>TELEGRAM_TOKEN</code>、<code>TELEGRAM_CHAT_ID</code>），不写在配置文件里。": "Pushes to Bark / Telegram according to <code>[alerts]</code>. Secrets come from environment variables (<code>BARK_KEY</code>, <code>TELEGRAM_TOKEN</code>, <code>TELEGRAM_CHAT_ID</code>) and are never written to the config file.",
+    "分类型推送开关": "Push switches by event type",
+    "关掉的类型<b>仍然显示在面板上</b>，只是不推手机。改这里等同于改 <code>[alerts.kinds]</code>。": "Types you switch off <b>still appear on the dashboard</b>; they just stop reaching your phone. Changing them here is the same as editing <code>[alerts.kinds]</code>.",
+    "发一条测试通知": "Send a test notification",
+    "发送中…": "Sending…",
+    "测试失败": "Test failed",
+    "开关已保存": "Switches saved",
+    "保存前会先校验 TOML 语法，语法不过就不会动磁盘上的文件；保存时旧版本会存成 <code>config.toml.bak</code>。改完即时生效，只有监听端口这类启动项需要重启容器。": "The TOML is validated before saving; if it does not parse, the file on disk is left untouched. The previous version is kept as <code>config.toml.bak</code>. Changes take effect immediately — only start-up settings such as the listen port need a container restart.",
+    "校验并保存": "Validate and save",
+    "放弃修改": "Discard changes",
+    "已保存": "Saved",
+    "保存失败": "Save failed",
+    "需要后端": "Backend required",
+    "这是静态演示站，没有运行中的 lanpulse 后端，所以设置页不可用。<br>部署之后（<code>docker compose up -d</code>）这里就是配置编辑器和告警开关。": "This is a static demo with no lanpulse backend running, so the settings page is unavailable.<br>Once deployed (<code>docker compose up -d</code>), this is where the config editor and alert switches live.",
+    "硬件: 温度越线 / 风扇停转 / 磁盘写满 / RAID 异常": "Hardware: temperature thresholds / stopped fans / full disks / RAID faults",
+    "分支隧道中断与恢复": "Branch tunnels going down and coming back",
+    "WAN 拨号上下线": "WAN link up and down",
+    "虚拟机启停": "Virtual machines starting and stopping",
+    "OpenVPN 拨入用户上下线": "OpenVPN dial-in users connecting and disconnecting",
+    "WireGuard peer 上下线 (手机常切网, 比较碎)": "WireGuard peers connecting and disconnecting (phones switch networks a lot, so this is noisy)",
+    "tailnet 节点上下线": "tailnet nodes coming and going",
+    "内网设备接入 / 离开": "LAN devices joining and leaving",
+    "无线接入 / 离开 / 漫游": "Wi-Fi join / leave / roam",
+    "入口连接数变化": "Changes in ingress connection counts",
+    "流量突发 (家用场景通常是'有意思'而不是'要处理')": "Traffic bursts (at home these are usually 'interesting', not 'actionable')",
+    "{n} 项数据源没通": "{n} data sources not working",
+    "展开": "Expand",
+    "收起": "Collapse",
+    "查看文档": "Read the docs",
+    "{n}/{m} 在线": "{n}/{m} online",
+    "{n} 个会话 · 一对端一账号": "{n} sessions · one account per peer",
+    "{n} 核": "{n} cores",
+    "{n} 线程": "{n} threads",
+    "通电 {n} 年": "{n} years powered on",
+    "ipmi 采集正常": "ipmi scrape OK",
+    "{n} 台在线 (DHCP 租约)": "{n} online (DHCP leases)",
+    "tailnet 节点": "tailnet nodes",
+    "系统温度": "System temp",
+    "台": "clients",
+    "设置": "Settings",
+    "后端未就绪": "backend not ready",
+    "其它 TCP": "Other TCP",
+    "其它 UDP": "Other UDP",
+    "内网互访": "LAN-to-LAN",
+    "公网入站": "Inbound from Internet",
+    "HTTPS 入口": "HTTPS ingress",
+    "HTTPS/QUIC": "HTTPS/QUIC"
   },
   "events": [
     [
@@ -290,6 +362,98 @@
     [
       "给",
       "→"
+    ],
+    [
+      "Prometheus 可达",
+      "Prometheus reachable"
+    ],
+    [
+      "面板拿不到任何指标。检查 config.toml 的 [prometheus] url —— 用 compose 部署时应为 http://prometheus:9090",
+      "The dashboard is getting no metrics at all. Check [prometheus] url in config.toml — with compose it should be http://prometheus:9090"
+    ],
+    [
+      "RouterOS 指标 (mktxp, routerboard_name=",
+      "RouterOS metrics (mktxp, routerboard_name="
+    ],
+    [
+      "mktxp 没有产出数据。三个常见原因: ①compose 里 mktxp 的配置要挂到 /etc/mktxp; ",
+      "mktxp is producing no data. Three common causes: (1) in compose, the mktxp config must be mounted at /etc/mktxp; "
+    ],
+    [
+      "②mktxp.conf 的段名必须是 [",
+      "(2) the section name in mktxp.conf must be ["
+    ],
+    [
+      "], 和 config.toml 的 router.name 一致; ",
+      "], matching router.name in config.toml; "
+    ],
+    [
+      "③路由器上没开 API 服务或账号密码不对 —— 看 docker compose logs mktxp",
+      "(3) the API service is off on the router, or the credentials are wrong — check docker compose logs mktxp"
+    ],
+    [
+      "WAN 接口 ",
+      "WAN interface "
+    ],
+    [
+      "路由器上没有叫 ",
+      "There is no interface called "
+    ],
+    [
+      " 的接口。拨号线路通常是 pppoe-out1, ",
+      " on the router. Dial-up links are usually pppoe-out1; "
+    ],
+    [
+      "静态 IP / DHCP 则填物理口名(如 ether1)。改 config.toml 的 router.wan_interface",
+      "for static IP / DHCP use the physical port name (e.g. ether1). Change router.wan_interface in config.toml"
+    ],
+    [
+      "1 秒快车道 (RouterOS API 8728)",
+      "1-second fast lane (RouterOS API 8728)"
+    ],
+    [
+      "连不上路由器的二进制 API, 面板会退化成 Prometheus 的抓取粒度(一顿一顿的)。",
+      "Cannot reach the router's binary API, so the dashboard falls back to Prometheus scrape resolution (visibly choppy). "
+    ],
+    [
+      "检查 router.host / .env 的 ROS_PASS / 路由器上 /ip service 的 api 是否启用并放行了本机",
+      "Check router.host, ROS_PASS in .env, and whether /ip service api is enabled on the router and allows this host"
+    ],
+    [
+      "kid-control 设备 (",
+      "kid-control devices ("
+    ],
+    [
+      "没有 kid-control 数据, '内网设备流量'表会是空的。这是 RouterOS 的功能, ",
+      "Without kid-control data the 'LAN device traffic' table stays empty. This is a RouterOS feature; "
+    ],
+    [
+      "需要在路由器上建一个 kid-control profile(用全天范围, 否则会拦设备)",
+      "create a kid-control profile on the router (use an all-day range, or it will start blocking devices)"
+    ],
+    [
+      "可选模块: ",
+      "Optional module: "
+    ],
+    [
+      "边缘主机的 node_exporter 没数据。入口/分支隧道/tailnet 这三块会是空的",
+      "No node_exporter data from the edge host. The ingress, branch-tunnel and tailnet panels will be empty"
+    ],
+    [
+      "pve-exporter 没数据。用 --profile pve 启动并填好 .env 里的 PVE token",
+      "No pve-exporter data. Start with --profile pve and fill in the PVE token in .env"
+    ],
+    [
+      "群晖 SNMP 没数据。用 --profile snmp 启动, 并在 exporters/snmp/snmp.yml 填好凭据",
+      "No Synology SNMP data. Start with --profile snmp and fill in the credentials in exporters/snmp/snmp.yml"
+    ],
+    [
+      "UniFi 没数据。用 --profile unifi 启动并在 .env 填 UNIFI_URL / UNIFI_API_KEY",
+      "No UniFi data. Start with --profile unifi and set UNIFI_URL / UNIFI_API_KEY in .env"
+    ],
+    [
+      "ipmi-exporter 没数据。用 --profile ipmi 启动, 并在 exporters/ipmi/ipmi.yml 填 BMC 账号",
+      "No ipmi-exporter data. Start with --profile ipmi and set the BMC account in exporters/ipmi/ipmi.yml"
     ]
   ]
 }
