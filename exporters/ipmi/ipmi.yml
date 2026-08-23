@@ -1,0 +1,10 @@
+# ipmi-exporter。每台机器的 BMC 用户名/密码在这里, target 名要和 config.toml 的 hardware.bmc 对上。
+modules:
+  default:
+    user: "ADMIN"
+    pass: "CHANGE_ME"
+    driver: "LAN_2_0"
+    privilege: "user"
+    timeout: 10000
+    collectors: [ipmi, dcmi, bmc]
+    exclude_sensor_ids: []

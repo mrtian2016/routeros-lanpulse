@@ -1,0 +1,102 @@
+# lanpulse —— 用 profile 控制启用哪些采集器, 只跑你真有的东西:
+#
+#   docker compose up -d                                  # 只有面板 + Prometheus
+#   docker compose --profile router up -d                 # + RouterOS (mktxp)
+#   docker compose --profile router --profile pve up -d   # + Proxmox VE
+#   docker compose --profile all up -d                    # 全套
+#
+# 第一次跑之前:
+#   cp config.example.toml config.toml   并按里面的注释改
+#   cp .env.example .env                 填各服务的密码
+services:
+  lanpulse:
+    build: .
+    image: ghcr.io/mrtian2016/lanpulse:latest
+    container_name: lanpulse
+    restart: unless-stopped
+    ports: ["${BIND_ADDR:-0.0.0.0}:${LANPULSE_PORT:-9132}:9132"]
+    volumes:
+      # 可写: 设置页要往回写。不想让网页改配置就改成 :ro, 设置页会提示写入失败。
+      - ./config.toml:/app/config.toml:rw
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      PROM: http://prometheus:9090
+      ROS_PASS: ${ROS_PASS:-}          # 路由器只读账号密码, 不写进 config.toml
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}   # 不设则设置页关闭 (fail-closed)
+      BARK_KEY: ${BARK_KEY:-}
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    depends_on: [prometheus]
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: lanpulse-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=${RETENTION:-30d}
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom-data:/prometheus
+    ports: ["${BIND_ADDR:-127.0.0.1}:9090:9090"]
+
+  # ── RouterOS 指标 ────────────────────────────────────────────────────────
+  mktxp:
+    image: ghcr.io/akpw/mktxp:latest
+    container_name: lanpulse-mktxp
+    restart: unless-stopped
+    profiles: [router, all]
+    volumes: ["./exporters/mktxp:/root/mktxp"]
+
+  # ── Proxmox VE ──────────────────────────────────────────────────────────
+  pve-exporter:
+    image: prompve/prometheus-pve-exporter:latest
+    container_name: lanpulse-pve-exporter
+    restart: unless-stopped
+    profiles: [pve, all]
+    environment:
+      PVE_USER: ${PVE_USER:-}
+      PVE_TOKEN_NAME: ${PVE_TOKEN_NAME:-}
+      PVE_TOKEN_VALUE: ${PVE_TOKEN_VALUE:-}
+      PVE_VERIFY_SSL: "false"
+
+  # ── IPMI (超微/戴尔等带 BMC 的机器) ──────────────────────────────────────
+  ipmi-exporter:
+    image: prometheuscommunity/ipmi-exporter:latest
+    container_name: lanpulse-ipmi-exporter
+    restart: unless-stopped
+    profiles: [ipmi, all]
+    volumes: ["./exporters/ipmi/ipmi.yml:/config.yml:ro"]
+    command: ["--config.file=/config.yml"]
+
+  # ── SNMP (群晖 / 交换机) ────────────────────────────────────────────────
+  snmp-exporter:
+    image: prom/snmp-exporter:latest
+    container_name: lanpulse-snmp-exporter
+    restart: unless-stopped
+    profiles: [snmp, all]
+    volumes: ["./exporters/snmp/snmp.yml:/etc/snmp_exporter/snmp.yml:ro"]
+
+  # ── NetFlow v9 收集器 (本项目自带) ──────────────────────────────────────
+  netflow:
+    build: ./exporters/netflow
+    container_name: lanpulse-netflow
+    restart: unless-stopped
+    profiles: [netflow, all]
+    ports: ["${BIND_ADDR:-0.0.0.0}:2055:2055/udp"]
+    environment:
+      LAN_CIDR: ${LAN_CIDR:-192.168.1.0/24}
+
+  # ── UniFi (本项目自带, 用 API Key) ──────────────────────────────────────
+  unifi-exporter:
+    build: ./exporters/unifi
+    container_name: lanpulse-unifi-exporter
+    restart: unless-stopped
+    profiles: [unifi, all]
+    environment:
+      UNIFI_URL: ${UNIFI_URL:-}
+      UNIFI_API_KEY: ${UNIFI_API_KEY:-}
+
+volumes:
+  prom-data:

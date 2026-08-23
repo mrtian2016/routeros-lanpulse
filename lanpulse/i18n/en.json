@@ -1,0 +1,283 @@
+{
+  "_comment": "lanpulse 的英文翻译。前后端共用: 后端把它注入页面(window.__I18N__), 同时用于告警外发的文案。 ui 是界面词条(中文原文当 key, 缺条目自动回退中文); events 是事件文案的短语对, 按长度倒序应用。",
+  "ui": {
+    "WAN 下行": "WAN down",
+    "WAN 上行": "WAN up",
+    "PPPoE · 峰值": "PPPoE · peak",
+    "远程接入": "Remote access",
+    "设备": "Device",
+    "分支隧道": "Branch tunnels",
+    "在线": "online",
+    "入口连接": "Ingress",
+    "活跃": "active",
+    "活跃连接": "connections",
+    "无线接入": "Wi-Fi clients",
+    "无线客户端": "Wi-Fi clients",
+    "内网 DHCP ·": "LAN DHCP ·",
+    "台设备": "devices",
+    "流量流向图": "Traffic flow",
+    "线的粗细与流速 = 当前速率 · 悬停看详情": "line width & speed = current rate · hover for details",
+    "WAN / 公网": "WAN / Internet",
+    "OpenVPN 服务端": "OpenVPN server",
+    "入口 / 代理": "Ingress / proxy",
+    "入口 / 公网服务": "Ingress / public services",
+    "分支站点": "Branch sites",
+    "WireGuard peers": "WireGuard peers",
+    "OpenVPN 用户": "OpenVPN users",
+    "内网": "LAN",
+    "公网 IPv4": "Public IPv4",
+    "实时事件": "Live events",
+    "接入 / 断开 / 漫游 / 突发 / 告警": "join / leave / roam / burst / alert",
+    "监控已启动，等待状态变化事件": "Monitoring started, waiting for state changes",
+    "WireGuard 客户端": "WireGuard peers",
+    "状态": "State",
+    "握手": "Handshake",
+    "近 60s": "last 60s",
+    "分支站点隧道": "Branch tunnels",
+    "站点": "Site",
+    "对端网段": "Remote subnet",
+    "OpenVPN 拨入": "OpenVPN dial-in",
+    "身份": "User",
+    "来源 IP": "Source IP",
+    "分配地址": "Assigned IP",
+    "tailnet 终端": "tailnet nodes",
+    "系统": "OS",
+    "内网设备流量": "LAN device traffic",
+    "来自 ROS kid-control": "from RouterOS kid-control",
+    "当前 ↓/↑": "Now ↓/↑",
+    "累计 ↓": "Total ↓",
+    "累计 ↑": "Total ↑",
+    "等待 kid-control 统计…": "waiting for kid-control stats…",
+    "PVE 虚拟机": "PVE guests",
+    "内存": "Memory",
+    "磁盘 IO": "Disk IO",
+    "运行": "running",
+    "停机": "stopped",
+    "VM 已用内存": "Guest memory used",
+    "运行中 VM": "Running guests",
+    "正常": "OK",
+    "偏高": "High",
+    "过热": "Hot",
+    "RAID 正常": "RAID OK",
+    "RAID 异常": "RAID degraded",
+    "存储": "Storage",
+    "磁盘": "Disk",
+    "未接": "n/c",
+    "宿主机 load1": "host load1",
+    "NVMe 温度": "NVMe temp",
+    "NVMe 寿命已用": "NVMe life used",
+    "通电": "powered",
+    "频段": "Band",
+    "信号": "Signal",
+    "设备去向 · NetFlow": "Device destinations · NetFlow",
+    "近 5 分钟 · 带宽 = 流量": "last 5 min · width = volume",
+    "窗口内暂无流量样本…": "no flow samples in window…",
+    "NetFlow 收集器未就绪": "NetFlow collector not ready",
+    "WAN 24 小时": "WAN 24 h",
+    "5 分钟粒度 · 悬停看数值": "5-min resolution · hover for values",
+    "下行": "Down",
+    "上行": "Up",
+    "流量突发": "traffic burst",
+    "下行突发": "download burst",
+    "上行突发": "upload burst",
+    "双向突发": "bidirectional burst",
+    "恢复": "up",
+    "中断": "down",
+    "离线": "offline",
+    "脱敏模式": "redacted",
+    "实时": "live",
+    "累计自路由器启动": "accumulated since router boot",
+    "数据源": "Sources",
+    "采集 Prometheus，本页每秒刷新（WAN / 每设备速率直连路由器取 1 秒粒度，其余走 Prometheus）。": "Scraped by Prometheus; this page refreshes every second (WAN and per-device rates are read straight from the router at 1-second resolution)."
+  },
+  "events": [
+    [
+      "下行突发",
+      "download burst"
+    ],
+    [
+      "上行突发",
+      "upload burst"
+    ],
+    [
+      "双向突发",
+      "bidirectional burst"
+    ],
+    [
+      "流量突发",
+      "traffic burst"
+    ],
+    [
+      "均值",
+      "avg"
+    ],
+    [
+      "超过阈值",
+      "exceeds"
+    ],
+    [
+      "回落到",
+      "back to"
+    ],
+    [
+      "DHCP 分配",
+      "DHCP lease"
+    ],
+    [
+      "DHCP 回收",
+      "DHCP release"
+    ],
+    [
+      "新设备接入内网",
+      "new device joined LAN"
+    ],
+    [
+      "设备离开",
+      "device left"
+    ],
+    [
+      "无线接入",
+      "Wi-Fi joined"
+    ],
+    [
+      "无线离开",
+      "Wi-Fi left"
+    ],
+    [
+      "漫游",
+      "roamed"
+    ],
+    [
+      "OpenVPN 用户",
+      "OpenVPN user"
+    ],
+    [
+      "登录成功, 分配",
+      "logged in, assigned"
+    ],
+    [
+      "有客户端接入",
+      "client connected"
+    ],
+    [
+      "连接归零",
+      "no connections"
+    ],
+    [
+      "条连接",
+      "connections"
+    ],
+    [
+      "连接数",
+      "connections"
+    ],
+    [
+      "事件引擎异常",
+      "event engine error"
+    ],
+    [
+      "恢复转动",
+      "spinning again"
+    ],
+    [
+      "管理员",
+      "admin"
+    ],
+    [
+      "分支",
+      "branch"
+    ],
+    [
+      "虚拟机",
+      "VM"
+    ],
+    [
+      "节点",
+      "node"
+    ],
+    [
+      "入口",
+      "ingress"
+    ],
+    [
+      "拨号",
+      "dial-up"
+    ],
+    [
+      "宿主机",
+      "host"
+    ],
+    [
+      "温度",
+      "temp"
+    ],
+    [
+      "内存",
+      "memory"
+    ],
+    [
+      "占用",
+      "usage"
+    ],
+    [
+      "寿命",
+      "wear"
+    ],
+    [
+      "来自",
+      "from"
+    ],
+    [
+      "拨入",
+      "connected"
+    ],
+    [
+      "断开",
+      "disconnected"
+    ],
+    [
+      "登录",
+      "login"
+    ],
+    [
+      "启动",
+      "started"
+    ],
+    [
+      "停机",
+      "stopped"
+    ],
+    [
+      "停转",
+      "stopped"
+    ],
+    [
+      "上线",
+      "up"
+    ],
+    [
+      "离线",
+      "offline"
+    ],
+    [
+      "正常",
+      "OK"
+    ],
+    [
+      "异常",
+      "degraded"
+    ],
+    [
+      "恢复",
+      "up"
+    ],
+    [
+      "中断",
+      "down"
+    ],
+    [
+      "给",
+      "→"
+    ]
+  ]
+}

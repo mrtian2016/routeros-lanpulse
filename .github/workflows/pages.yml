@@ -1,0 +1,41 @@
+# 把 docs/demo/ 发布到 GitHub Pages。
+# 演示站是纯静态的(脱敏快照 + 相对路径), 所以不需要构建, 直接上传目录即可。
+#
+# 注意: 免费账号只能从**公开**仓库发布 Pages; 私有仓库要 Pro 及以上。
+# 仓库还是私有时这个工作流会失败, 属正常 —— 转公开后自动就通了。
+name: Deploy demo to Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/demo/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 检查演示站是脱敏的
+        # 双保险: 万一有人手动改了 docs/demo, 这里再挡一道, 别把真实数据发上公网
+        run: |
+          grep -q '"redacted":true\|"redacted": true' docs/demo/demo/fixture.js \
+            || { echo "::error::演示数据没有 redacted 标记, 拒绝发布"; exit 1; }
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/demo
+      - id: deployment
+        uses: actions/deploy-pages@v4
