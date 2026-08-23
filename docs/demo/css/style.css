@@ -159,3 +159,27 @@
     #br-table th:nth-child(6), #br-table td:nth-child(6),
     #vm-table th:nth-child(5), #vm-table td:nth-child(5) { display: none; }
   }
+
+  /* 首屏自检 */
+  #health { background: var(--surface-1); border: 1px solid var(--warn); border-left-width: 3px;
+            border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+  #health.hide { display: none; }
+  #health h3 { margin: 0 0 8px; font-size: 13px; color: var(--warn); display: flex; align-items: center; gap: 8px; }
+  #health h3 button { margin-left: auto; background: none; border: 1px solid var(--line);
+            color: var(--text-muted); border-radius: 5px; font: inherit; font-size: 11px;
+            padding: 2px 8px; cursor: pointer; }
+  #health ul { margin: 0; padding: 0; list-style: none; }
+  #health li { padding: 6px 0; border-top: 1px solid var(--line); font-size: 12px; }
+  #health li:first-child { border-top: 0; }
+  #health .lbl { color: var(--text-primary); font-weight: 600; }
+  #health .hint { color: var(--text-secondary); display: block; margin-top: 2px; line-height: 1.6; }
+  #health a { color: var(--s-wan); }
+
+  /* WAN 曲线的时间档位按钮 */
+  .rangebtns { margin-left: auto; display: inline-flex; gap: 4px; }
+  .rangebtns button { background: var(--surface-2); border: 1px solid var(--line);
+        color: var(--text-muted); border-radius: 5px; font: inherit; font-size: 11px;
+        padding: 1px 8px; cursor: pointer; }
+  .rangebtns button:hover { color: var(--text-primary); }
+  .rangebtns button.on { background: var(--s-wan); border-color: var(--s-wan); color: #fff; }
+  #p-wan24 h2 { display: flex; align-items: center; gap: 8px; }

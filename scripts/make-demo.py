@@ -21,7 +21,7 @@ def get(url, path):
 LEAK_PATTERNS = {
     "疑似公网 IP": r"\b(?!203\.0\.113\.)(?!10\.)(?!127\.)(?!192\.168\.)(?!0\.)"
                    r"(?!172\.(?:1[6-9]|2\d|3[01])\.)(?!100\.6[4-9]\.)(?:\d{1,3}\.){3}\d{1,3}\b",
-    "疑似域名": r"\b(?!example\.com)(?!fonts\.g)[a-z0-9-]{3,}\.(?:cn|com|net|org|io)\b",
+    "疑似域名": r"\b(?!example\.com)(?!fonts\.g)(?!github\.com)(?!ghcr\.io)[a-z0-9-]{3,}\.(?:cn|com|net|org|io)\b",
     "疑似真实 MAC": r"\b(?!02:00)(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b",
     "疑似密钥": r"(?i)(?:password|api[_-]?key|secret|token)\s*[:=]\s*[\'\"][^\'\"]{6,}",
 }

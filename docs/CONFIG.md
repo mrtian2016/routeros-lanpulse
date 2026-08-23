@@ -38,10 +38,19 @@ row disappears.
 
 ## `[topology.nodes]`
 
-Canvas is 960×520. Nodes are declarative: `x/y/w/h/name/sub`.
-`core = true` draws a heavier border, `group = true` is a side heading with no box.
+Nodes are declarative: `x/y/w/h/name/sub`. `core = true` draws a heavier border,
+`group = true` is a heading whose members (WireGuard peers, branch sites, top LAN
+devices…) are laid out from its `x/y` and `gap` — one row per member, so a group with
+`y = 340, gap = 24` puts its third member at `y = 388`. The canvas sizes itself to
+whatever you place, so you never have to keep a viewBox in sync.
 
 Delete a node and every link to it disappears too — so to simplify the diagram, just delete.
+
+**The one layout rule worth knowing.** A group's band should sit on the same side of the
+canvas as the node that feeds it, in the same top-to-bottom order. `lan` sits above `edge`,
+so `lang` (fed by `lan`) is the top band and `ing` / `brg` / `tsg` (all fed by `edge`) come
+below it. Put an edge-fed group above a lan-fed one and its links have to travel back up
+across the whole diagram — which is exactly how the default layout used to look.
 
 ## `[events]`
 

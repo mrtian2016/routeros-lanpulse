@@ -18,13 +18,16 @@
   </span>
 </header>
 
+<!-- 数据源自检: 有问题才显示。首次部署时这块比任何文档都管用 -->
+<section id="health" class="hide"></section>
+
 <section class="grid tiles">
-  <div class="tile"><div class="k">WAN 下行</div><div class="v" id="t-wan-down">0<small>Mbps</small></div><div class="d">PPPoE · 峰值 <span id="t-wan-down-max">0</span> Mbps</div></div>
-  <div class="tile"><div class="k">WAN 上行</div><div class="v" id="t-wan-up">0<small>Mbps</small></div><div class="d">qb 上传限 0.5 Mbps</div></div>
+  <div class="tile"><div class="k">WAN 下行</div><div class="v" id="t-wan-down">0<small>Mbps</small></div><div class="d" id="t-wan-down-d"></div></div>
+  <div class="tile"><div class="k">WAN 上行</div><div class="v" id="t-wan-up">0<small>Mbps</small></div><div class="d" id="t-wan-up-d"></div></div>
   <div class="tile"><div class="k">远程接入</div><div class="v" id="t-remote">0<small>设备</small></div><div class="d"><span id="t-remote-d">WG 0 · OpenVPN 0 · tailnet 0</span></div></div>
-  <div class="tile"><div class="k">分支隧道</div><div class="v" id="t-branch">5<small>/ 5 在线</small></div><div class="d">edge 上的 OpenVPN 客户端</div></div>
+  <div class="tile"><div class="k">分支隧道</div><div class="v" id="t-branch">0</div><div class="d" id="t-branch-d"></div></div>
   <div class="tile"><div class="k">入口连接</div><div class="v" id="t-ingress">0<small>活跃</small></div><div class="d" id="t-ingress-d">-</div></div>
-  <div class="tile"><div class="k">无线接入</div><div class="v" id="t-clash">0<small>Mbps</small></div><div class="d">内网 DHCP · <span id="t-clash-n">0</span> 台设备</div></div>
+  <div class="tile"><div class="k">无线接入</div><div class="v" id="t-clash">0<small>Mbps</small></div><div class="d" id="t-clash-d"></div></div>
 </section>
 
 <section class="grid main">
@@ -38,7 +41,7 @@
       <span><i style="background:var(--s-branch)"></i>分支隧道</span>
       <span><i style="background:var(--s-proxy)"></i>入口 / 代理</span>
     </div>
-    <svg class="map" id="map" viewBox="0 0 980 560" role="img" aria-label="网络流量流向图"></svg>
+    <svg class="map" id="map" viewBox="0 0 1100 560" role="img" aria-label="网络流量流向图"></svg>
   </div>
   <div class="panel">
     <h2>实时事件 <span class="hint">接入 / 断开 / 漫游 / 突发 / 告警</span></h2>
@@ -52,9 +55,9 @@
     <table id="wg-table"><thead><tr><th>设备</th><th>状态</th><th>握手</th><th class="num">↓ Mbps</th><th class="num">↑ Mbps</th><th>近 60s</th></tr></thead><tbody></tbody></table>
   </div>
   <div class="panel" id="p-br">
-    <h2>分支站点隧道 <span class="hint">edge 上的 5 条 OpenVPN</span></h2>
+    <h2>分支站点隧道 <span class="hint" id="br-hint"></span></h2>
     <table id="br-table"><thead><tr><th>站点</th><th>状态</th><th>对端网段</th><th class="num">↓ Mbps</th><th class="num">↑ Mbps</th><th>近 60s</th></tr></thead><tbody></tbody></table>
-    <h2 style="margin-top:14px">OpenVPN 拨入 <span class="hint" id="ov-hint">服务端 60957</span></h2>
+    <h2 style="margin-top:14px">OpenVPN 拨入 <span class="hint" id="ov-hint"></span></h2>
     <table id="ov-table"><thead><tr><th>身份</th><th>来源 IP</th><th>分配地址</th><th>在线</th><th class="num">↓/↑ Mbps</th></tr></thead><tbody></tbody></table>
     <h2 style="margin-top:14px">tailnet 终端 <span class="hint" id="ts-hint">headscale</span></h2>
     <table id="ts-table"><thead><tr><th>设备</th><th>状态</th><th>tailnet IP</th><th>系统</th></tr></thead><tbody></tbody></table>
@@ -75,7 +78,7 @@
   <div id="hw-panels" style="display:contents"></div>
   <div class="panel" id="p-nas">
     <h2 id="nas-title">NAS <span class="hint" id="nas-hint"></span></h2>
-    <div class="hero"><span class="n" id="nas-vol">--</span><span class="u">% 卷 1 已用</span><span class="tag ok" id="nas-tag">RAID 正常</span></div>
+    <div class="hero"><span class="n" id="nas-vol">--</span><span class="u">°C 系统温度</span><span class="tag ok" id="nas-tag">RAID 正常</span></div>
     <div class="kv" id="nas-kv"></div>
     <ul class="sel" id="nas-disks"></ul>
   </div>
@@ -88,10 +91,9 @@
 
 <section class="grid hw">
   <div class="panel" id="p-unifi">
-    <h2 id="wifi-title">Wi-Fi <span class="hint" id="wifi-hint">控制器 API · 信号 / 频段 / 速率</span></h2>
+    <h2><span id="wifi-title">无线接入</span> <span class="hint" id="wifi-hint"></span></h2>
     <div class="util">
-      <div><div class="lbl"><span>2.4 GHz · ch 6 · <b id="ap24n">0</b> 台</span><span id="ap24u">0%</span></div><div class="g"><i id="ap24g" style="background:var(--s-ovpn)"></i></div></div>
-      <div><div class="lbl"><span>5 GHz · ch 149 (80M) · <b id="ap5n">0</b> 台</span><span id="ap5u">0%</span></div><div class="g"><i id="ap5g" style="background:var(--s-wan)"></i></div></div>
+      <!-- renderWifi() 按实际射频重建这两行 -->
     </div>
     <table id="wifi-table"><thead><tr><th>设备</th><th>频段</th><th>信号</th><th class="num">↓ Mbps</th><th class="num">↑ Mbps</th><th>在线</th></tr></thead><tbody></tbody></table>
   </div>
@@ -103,9 +105,10 @@
 
 <section class="grid history">
   <div class="panel" id="p-wan24">
-    <h2>WAN 24 小时 <span class="hint">5 分钟粒度 · 悬停看数值</span></h2>
+    <h2>WAN 流量 <span class="hint" id="hist-hint"></span>
+      <span class="rangebtns" id="hist-range"></span></h2>
     <div class="legend"><span><i style="background:var(--s-wan)"></i>下行</span><span><i style="background:var(--s-wg)"></i>上行</span></div>
-    <svg class="hist" id="hist" viewBox="0 0 1200 170" preserveAspectRatio="none"></svg>
+    <svg class="hist" id="hist"></svg>
   </div>
 </section>
 

@@ -114,16 +114,22 @@ url = "http://netflow:9133"
 # and the links to it disappear with it.
 # core = true draws a heavier border; group = true is a side heading (no box).
 [topology.nodes]
-internet = { x = 80,  y = 250, w = 110, h = 48, name = "Internet", sub = "public IPv4" }
-ros      = { x = 330, y = 250, w = 140, h = 56, name = "RouterOS", sub = "192.168.1.1 · NAT / FW / WG", core = true }
-lan      = { x = 600, y = 250, w = 140, h = 56, name = "LAN / switch", sub = "192.168.1.0/24", core = true }
-edge     = { x = 600, y = 395, w = 150, h = 56, name = "edge", sub = "192.168.1.11 · ingress / mesh", core = true }
-unifi    = { x = 600, y = 110, w = 130, h = 48, name = "UniFi AP", sub = "192.168.1.30 · Wi-Fi" }
-wgg      = { x = 60,  y = 40,  w = 0,   h = 0,  name = "WireGuard peers", group = true }
-ovg      = { x = 60,  y = 460, w = 0,   h = 0,  name = "OpenVPN users",   group = true }
-ing      = { x = 830, y = 180, w = 0,   h = 0,  name = "ingress / public", group = true }
-brg      = { x = 830, y = 355, w = 0,   h = 0,  name = "branch sites",     group = true }
-tsg      = { x = 830, y = 470, w = 0,   h = 0,  name = "tailnet",          group = true }
+# Layout rule: a node's downstream group sits in its own horizontal band, ordered
+# the same way as its source. LAN is above edge, so LAN's groups take the upper
+# bands and edge's the lower ones — that is what keeps the curves from crossing.
+internet = { x = 200, y = 240, w = 110, h = 48, name = "Internet", sub = "public IPv4" }
+ros      = { x = 380, y = 240, w = 140, h = 56, name = "RouterOS", sub = "192.168.1.1 · NAT / FW / WG", core = true }
+unifi    = { x = 640, y = 20,  w = 130, h = 48, name = "UniFi AP", sub = "192.168.1.30 · Wi-Fi" }
+lan      = { x = 640, y = 100, w = 140, h = 56, name = "LAN / switch", sub = "192.168.1.0/24", core = true }
+edge     = { x = 640, y = 340, w = 150, h = 56, name = "edge", sub = "192.168.1.11 · ingress / mesh", core = true }
+# Groups: x/y is the first slot's top-left corner, gap is the row pitch.
+# Every member's position follows from these three numbers.
+wgg  = { x = 30,  y = 40,  w = 96,  h = 20, gap = 26, name = "WireGuard peers",  group = true }
+ovg  = { x = 30,  y = 430, w = 96,  h = 20, gap = 26, name = "OpenVPN users",    group = true }
+lang = { x = 950, y = 60,  w = 150, h = 20, gap = 26, name = "Top LAN devices",  group = true }
+ing  = { x = 950, y = 230, w = 120, h = 18, gap = 24, name = "ingress / public", group = true }
+brg  = { x = 950, y = 340, w = 120, h = 18, gap = 24, name = "branch sites",     group = true }
+tsg  = { x = 950, y = 490, w = 120, h = 18, gap = 24, name = "tailnet",          group = true }
 
 # ── Redaction ───────────────────────────────────────────────────────────────
 # Replaces public IPs, private IPs, MACs, domains, device names and site names

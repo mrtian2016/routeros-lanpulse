@@ -69,21 +69,26 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   // ---------- 拓扑 ----------
   // 拓扑节点来自 config.toml 的 [topology.nodes]; 没配就用这套默认布局
   const NODES = (CFG.topology && Object.keys(CFG.topology).length) ? CFG.topology : {
-    internet: { x: 80, y: 250, w: 110, h: 48, name: 'Internet', sub: '公网 IPv4' },
-    ros: { x: 330, y: 250, w: 140, h: 56, name: 'RouterOS', sub: '192.168.1.1 · NAT / FW / WG', core: true },
-    edge: { x: 600, y: 395, w: 150, h: 56, name: 'edge', sub: '192.168.1.11 · 入口 / 组网', core: true },
-    unifi: { x: 600, y: 110, w: 130, h: 48, name: 'UniFi AP', sub: '192.168.1.30 · 无线' },
-    lan: { x: 600, y: 250, w: 140, h: 56, name: '内网', sub: '192.168.1.0/24', core: true },
-    wgg: { x: 60, y: 40, w: 0, h: 0, name: 'WireGuard peers', group: true },
-    ovg: { x: 60, y: 460, w: 0, h: 0, name: 'OpenVPN 用户', group: true },
-    lang: { x: 775, y: 214, w: 0, h: 0, name: '内网 Top 设备', group: true },
-    brg: { x: 950, y: 355, w: 0, h: 0, name: '分支站点', group: true },
-    tsg: { x: 950, y: 470, w: 0, h: 0, name: 'tailnet', group: true },
-    ing: { x: 950, y: 180, w: 0, h: 0, name: '入口 / 公网服务', group: true },
+    internet: { x: 200, y: 240, w: 110, h: 48, name: 'Internet', sub: '公网 IPv4' },
+    ros:      { x: 380, y: 240, w: 140, h: 56, name: 'RouterOS', sub: '192.168.1.1 · NAT / FW / WG', core: true },
+    unifi:    { x: 640, y: 20,  w: 130, h: 48, name: 'UniFi AP', sub: '192.168.1.30 · 无线' },
+    lan:      { x: 640, y: 100, w: 140, h: 56, name: '内网', sub: '192.168.1.0/24', core: true },
+    edge:     { x: 640, y: 340, w: 150, h: 56, name: 'edge', sub: '192.168.1.11 · 入口 / 组网', core: true },
+    // 组: x/y 是第一格的左上角, gap 是行距 —— 组员位置全部由此推出, 不再散落在代码里
+    wgg:  { x: 30,  y: 40,  w: 96,  h: 20, gap: 26, group: true, name: 'WireGuard peers' },
+    ovg:  { x: 30,  y: 430, w: 96,  h: 20, gap: 26, group: true, name: 'OpenVPN 用户' },
+    lang: { x: 950, y: 60,  w: 150, h: 20, gap: 26, group: true, name: '内网 Top 设备' },
+    ing:  { x: 950, y: 230, w: 120, h: 18, gap: 24, group: true, name: '入口 / 公网服务' },
+    brg:  { x: 950, y: 340, w: 120, h: 18, gap: 24, group: true, name: '分支站点' },
+    tsg:  { x: 950, y: 490, w: 120, h: 18, gap: 24, group: true, name: 'tailnet' },
   };
-  // 右侧那一列小节点的 x 跟着各自的组标签走。以前写死 840, 谁改了 CFG.topology
-  // 就会出现"标签在这边、节点在那边"。
-  const colX = (g, dx = 10) => (NODES[g] ? NODES[g].x : 950) + dx;
+  // 组员格位。老配置里的组只有 x/y, 这里给出尺寸兜底。
+  const GDEF = { wgg: [96, 20, 26], ovg: [96, 20, 26], lang: [150, 20, 26],
+                 ing: [120, 18, 24], brg: [110, 18, 24], tsg: [110, 18, 24] };
+  const slot = (g, i) => {
+    const n = NODES[g] || {}, d = GDEF[g] || [110, 18, 24];
+    return { x: n.x || 0, y: (n.y || 0) + i * (n.gap || d[2]), w: n.w || d[0], h: n.h || d[1] };
+  };
   const side = (n, s) => s === 'l' ? { x: n.x, y: n.y + n.h / 2 } : s === 'r' ? { x: n.x + n.w, y: n.y + n.h / 2 } : s === 't' ? { x: n.x + n.w / 2, y: n.y } : { x: n.x + n.w / 2, y: n.y + n.h };
   const svg = document.getElementById('map'), NS = 'http://www.w3.org/2000/svg';
   const el = (tag, attrs = {}, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
@@ -104,59 +109,56 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   };
   const CURVE = (a, b, bend = .5) => { const mx = a.x + (b.x - a.x) * bend; return `M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}`; };
   const s_ = (n, k) => side(NODES[n], k);
+  const leftOf  = b => ({ x: b.x, y: b.y + b.h / 2 });
+  const rightOf = b => ({ x: b.x + b.w, y: b.y + b.h / 2 });
+  const mid = (a, b, dy = -7) => [(a.x + b.x) / 2, (a.y + b.y) / 2 + dy];
 
-  addEdge('wan', CURVE(s_('internet', 'r'), s_('ros', 'l')), COLOR.wan, () => smooth('wan', wanD() + wanU()), [262, 292],
+  addEdge('wan', CURVE(s_('internet', 'r'), s_('ros', 'l')), COLOR.wan, () => smooth('wan', wanD() + wanU()), mid(s_('internet', 'r'), s_('ros', 'l')),
     () => `<div class="tt">Internet ↔ RouterOS (PPPoE)</div><b>↓ ${fmt(wanD())}</b> / <b>↑ ${fmt(wanU())}</b> Mbps<br><span class="d">${S.wan && S.wan.online ? '已连接' : '离线'}${S.wan && S.wan.ip ? ' · ' + S.wan.ip : ''}</span>`);
-  addEdge('lan', CURVE(s_('ros', 'r'), s_('lan', 'l')), COLOR.wan, () => { const f = F(); return smooth('lan', f ? val(f.lan, 'down') + val(f.lan, 'up') : (S.lan && S.lan.devices || []).reduce((a, d) => a + d.down + d.up, 0)); }, [535, 238],
+  addEdge('lan', CURVE(s_('ros', 'r'), s_('lan', 'l')), COLOR.wan, () => { const f = F(); return smooth('lan', f ? val(f.lan, 'down') + val(f.lan, 'up') : (S.lan && S.lan.devices || []).reduce((a, d) => a + d.down + d.up, 0)); }, mid(s_('ros', 'r'), s_('lan', 'l')),
     r => `<div class="tt">RouterOS ↔ 内网</div><b>${fmt(r)} Mbps</b><br><span class="d">${t('{n} 台在线 (DHCP 租约)', { n: (S.lan && S.lan.clients) || 0 })}</span>`);
-  addEdge('dnat', CURVE(s_('ros', 'b'), s_('edge', 'l'), .35), COLOR.proxy, () => smooth('dnat', val(S.ingress, 'trojan') + val(S.ingress, 'https')), [470, 360],
+  addEdge('dnat', CURVE(s_('ros', 'b'), s_('edge', 'l'), .35), COLOR.proxy, () => smooth('dnat', val(S.ingress, 'trojan') + val(S.ingress, 'https')), mid(s_('ros', 'b'), s_('edge', 'l')),
     r => `<div class="tt">RouterOS → edge (dst-nat 32443/58443/3478)</div><b>${fmt(r)} Mbps</b><br><span class="d">公网入口转发</span>`);
-  addEdge('wifi', CURVE(s_('lan', 't'), s_('unifi', 'b'), .5), COLOR.ts, () => smooth('wifi', (S.wifi || []).reduce((a, w) => a + (w.down || 0) + (w.up || 0), 0)), [660, 205],
+  addEdge('wifi', CURVE(s_('lan', 't'), s_('unifi', 'b'), .5), COLOR.ts, () => smooth('wifi', (S.wifi || []).reduce((a, w) => a + (w.down || 0) + (w.up || 0), 0)), mid(s_('lan', 't'), s_('unifi', 'b')),
     r => { const rs = S.radios || []; return `<div class="tt">内网 ↔ UniFi AP</div><b>${fmt(r)} Mbps</b><br><span class="d">${(S.wifi || []).length} 个无线客户端${rs.map(x => ` · ${x.band} 利用率 ${x.util}%`).join('')}</span>`; });
 
   wgPeers.forEach((p, i) => {
-    const y = 32 + i * 26; p.node = { x: 30, y, w: 96, h: 20 };
-    addEdge('wg-' + p.id, CURVE({ x: 126, y: y + 10 }, s_('ros', 'l'), .55), COLOR.wg, () => p.online ? smooth('wg' + p.id, p.down + p.up) : 0, [0, 0],
+    p.node = slot('wgg', i);
+    addEdge('wg-' + p.id, CURVE(rightOf(p.node), s_('ros', 't'), .55), COLOR.wg, () => p.online ? smooth('wg' + p.id, p.down + p.up) : 0, [0, 0],
       () => `<div class="tt">WireGuard · ${p.id}</div>${p.online ? `<b>↓ ${fmt(p.down)}</b> / <b>↑ ${fmt(p.up)}</b> Mbps<br><span class="d">${p.ip} · 握手 ${p.hs}s 前</span>` : `<span class="d">${p.ip} · 未连接</span>`}`);
   });
   ovpnUsers.forEach((u, i) => {
-    const y = 470 + i * 26; u.node = { x: 30, y, w: 96, h: 20 };
-    addEdge('ov-' + u.id, CURVE({ x: 126, y: y + 10 }, s_('ros', 'l'), .55), COLOR.ovpn, () => smooth('ov' + u.id, u.down + u.up), [0, 0],
+    u.node = slot('ovg', i);
+    addEdge('ov-' + u.id, CURVE(rightOf(u.node), s_('ros', 'l'), .55), COLOR.ovpn, () => smooth('ov' + u.id, u.down + u.up), [0, 0],
       () => `<div class="tt">OpenVPN 服务端 · ${u.id}</div><b>↓ ${fmt(u.down)}</b> / <b>↑ ${fmt(u.up)}</b> Mbps`);
   });
   branches.forEach((b, i) => {
-    const y = 330 + i * 24; b.node = { x: colX('brg'), y, w: 110, h: 18 };
-    addEdge('br-' + b.id, CURVE(s_('edge', 'r'), { x: colX('brg'), y: y + 9 }, .5), COLOR.branch, () => b.online ? smooth('br' + b.id, b.down + b.up) : 0, [0, 0],
+    b.node = slot('brg', i);
+    addEdge('br-' + b.id, CURVE(s_('edge', 'r'), leftOf(b.node), .5), COLOR.branch, () => b.online ? smooth('br' + b.id, b.down + b.up) : 0, [0, 0],
       () => `<div class="tt">分支隧道 · ${b.id}${b.dev ? ' (' + b.dev + ')' : ''}</div>${b.online ? `<b>↓ ${fmt(b.down)}</b> / <b>↑ ${fmt(b.up)}</b> Mbps<br><span class="d">对端 ${b.peer || '?'} · ${b.net}</span>${(b.nets||[]).length ? `<br><span class="d">承载: ${b.nets.join(' ')}</span>` : ''}` : `<span class="d">${b.net} · 中断</span>`}`);
   });
-  const tsNode = { id: 'tailnet', node: { x: colX('tsg'), y: 470, w: 110, h: 18 }, online: true };
-  addEdge('ts', CURVE(s_('edge', 'b'), { x: colX('tsg'), y: 479 }, .5), COLOR.ts, () => 0.02, [0, 0],
+  const tsNode = { id: 'tailnet', node: slot('tsg', 0), online: true };
+  addEdge('ts', CURVE(s_('edge', 'b'), leftOf(tsNode.node), .5), COLOR.ts, () => 0.02, [0, 0],
     () => `<div class="tt">tailnet (headscale)</div><span class="d">${(S.tailnet && S.tailnet.online) || 0}/${(S.tailnet && S.tailnet.nodes) || 0} 在线 · edge 发布子网路由</span><br>${((S.tailnet && S.tailnet.peers) || []).map(p => `<span style="opacity:${p.online ? 1 : .4}">${p.id}</span>`).join(' · ')}`);
   ingLabels.forEach((c, i) => {
-    const y = 190 + i * 24; c.node = { x: colX('ing'), y, w: 120, h: 18 };
-    addEdge('in-' + i, CURVE(s_('edge', 't'), { x: colX('ing'), y: y + 9 }, .6), COLOR.proxy, () => smooth('in' + i, val(S.ingress, c.k)), [0, 0],
+    c.node = slot('ing', i);
+    addEdge('in-' + i, CURVE(s_('edge', 't'), leftOf(c.node), .6), COLOR.proxy, () => smooth('in' + i, val(S.ingress, c.k)), [0, 0],
       r => `<div class="tt">入口 · ${c.id}</div><b>${fmt(r)} Mbps</b>`);
   });
 
   // 内网 Top 设备。地图上原本一条粗线进"内网"就断了 —— 看得见内网在跑 150 Mbps,
   // 看不见是谁在跑。速率取 ROS kid-control 的实时值(和"内网设备流量"面板同源),
   // 不用 NetFlow: 那是 5 分钟平均, 下载刚起来时会低得离谱。
-  const LTW = 150, LTH = 20, LTGAP = 26;
   if (!NODES.lang) {
-    // 已有的小节点(分支/入口/tailnet)此时都已排好, 直接取它们和主节点的最右边界。
-    const boxes = [...Object.values(NODES).map(n => ({ x: n.x, w: n.w || 0 })),
-                   ...branches.map(b => b.node), ...ingLabels.map(c => c.node), tsNode.node];
-    const right = Math.max(...boxes.map(b => b.x + b.w));
-    const lan = NODES.lan || { x: right, y: 250, h: 56 };
-    NODES.lang = { x: right + 40, y: lan.y + lan.h / 2 - (5 * LTGAP) / 2, w: 0, h: 0,
-                   name: '内网 Top 设备', group: true };
+    // 老配置里没有这个组。放在内网右边, 竖直居中对齐, 和其它组保持一列。
+    const others = [...branches, ...ingLabels, tsNode].map(o => o.node);
+    const right = Math.max(...others.map(b => b.x), (NODES.lan.x + NODES.lan.w + 40));
+    NODES.lang = { x: right, y: NODES.lan.y + NODES.lan.h / 2 - 5 * 26 / 2,
+                   w: 150, h: 20, gap: 26, group: true, name: '内网 Top 设备' };
   }
-  const LAN_TOP = Array.from({ length: 5 }, (_, i) => ({
-    i, name: '', down: 0, up: 0,
-    node: { x: NODES.lang.x, y: NODES.lang.y + 8 + i * LTGAP, w: LTW, h: LTH },
-  }));
+  const LAN_TOP = Array.from({ length: 5 }, (_, i) => ({ i, name: '', down: 0, up: 0, node: slot('lang', i) }));
   LAN_TOP.forEach(d => {
-    addEdge('lt-' + d.i, CURVE(s_('lan', 'r'), { x: d.node.x, y: d.node.y + d.node.h / 2 }, .5),
+    addEdge('lt-' + d.i, CURVE(s_('lan', 'r'), leftOf(d.node), .5),
       COLOR.wan, () => d.name ? smooth('lt' + d.i, d.down + d.up) : 0, [0, 0],
       () => d.name ? `<div class="tt">${H(d.name)}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps`
                    : `<span class="d">${t('暂无数据')}</span>`);
