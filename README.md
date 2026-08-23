@@ -9,7 +9,7 @@ whether the tunnels are up, and how hot the machines are running.
 
 `RouterOS` · `Prometheus` · `no build step` · `zh / en` · `light / dark`
 
-[中文](README.zh-CN.md) · [Configuration](docs/CONFIG.md)
+[**Live demo**](https://mrtian2016.github.io/routeros-lanpulse/) · [中文](README.zh-CN.md) · [Configuration](docs/CONFIG.md)
 
 </div>
 
@@ -68,7 +68,7 @@ event stream, and a few tables that matter.
 ## Quick start
 
 ```bash
-git clone https://github.com/mrtian2016/lanpulse.git && cd lanpulse
+git clone https://github.com/mrtian2016/routeros-lanpulse.git && cd routeros-lanpulse
 cp config.example.toml config.toml     # your addresses and names
 cp .env.example .env                   # your passwords
 docker compose --profile router up -d
@@ -91,7 +91,7 @@ Profiles select which exporters run — start only what you actually have:
 
 ## Try it without installing
 
-`docs/demo/` is a static demo built from a **redacted snapshot** — plain HTML, no backend
+**[Try the live demo](https://mrtian2016.github.io/routeros-lanpulse/)** — `docs/demo/` is a static demo built from a **redacted snapshot** — plain HTML, no backend
 and no Prometheus needed. Drop it on GitHub Pages or any static host.
 
 ```bash

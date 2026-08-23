@@ -11,7 +11,7 @@
 services:
   lanpulse:
     build: .
-    image: ghcr.io/mrtian2016/lanpulse:latest
+    image: ghcr.io/mrtian2016/routeros-lanpulse:latest
     container_name: lanpulse
     restart: unless-stopped
     ports: ["${BIND_ADDR:-0.0.0.0}:${LANPULSE_PORT:-9132}:9132"]

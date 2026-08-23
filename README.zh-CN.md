@@ -8,7 +8,7 @@
 
 `RouterOS` · `Prometheus` · `零构建` · `中/英` · `亮/暗`
 
-[English](README.md) · [配置说明](docs/CONFIG.md)
+[**在线演示**](https://mrtian2016.github.io/routeros-lanpulse/) · [English](README.md) · [配置说明](docs/CONFIG.md)
 
 </div>
 
@@ -58,7 +58,7 @@ lanpulse 把这些收进一页：一张会流动的拓扑图 + 一条实时事�
 ## 快速开始
 
 ```bash
-git clone https://github.com/mrtian2016/lanpulse.git && cd lanpulse
+git clone https://github.com/mrtian2016/routeros-lanpulse.git && cd routeros-lanpulse
 cp config.example.toml config.toml     # 改成你自己的地址和名字
 cp .env.example .env                   # 填密码
 docker compose --profile router up -d  # 只跑面板 + Prometheus + RouterOS 采集
@@ -81,7 +81,7 @@ docker compose --profile router up -d  # 只跑面板 + Prometheus + RouterOS �
 
 ## 先看看效果
 
-不想装东西也能看：`docs/demo/` 是一份**脱敏快照**做的静态演示站，纯 HTML，
+**[在线演示](https://mrtian2016.github.io/routeros-lanpulse/)** —— `docs/demo/` 是一份**脱敏快照**做的静态演示站，纯 HTML，
 扔到 GitHub Pages 或任意静态托管就能跑，不需要后端也不需要 Prometheus。
 
 ```bash

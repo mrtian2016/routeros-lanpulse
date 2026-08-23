@@ -3,7 +3,7 @@ FROM python:3.12-slim
 LABEL org.opencontainers.image.title="lanpulse" \
       org.opencontainers.image.description="MikroTik RouterOS 实时流量面板 / A live dashboard for MikroTik RouterOS" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.source="https://github.com/mrtian2016/lanpulse"
+      org.opencontainers.image.source="https://github.com/mrtian2016/routeros-lanpulse"
 WORKDIR /app
 COPY lanpulse/ /app/lanpulse/
 ENV CONFIG=/app/config.toml \
