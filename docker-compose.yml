@@ -47,7 +47,10 @@ services:
     container_name: lanpulse-mktxp
     restart: unless-stopped
     profiles: [router, all]
-    volumes: ["./exporters/mktxp:/root/mktxp"]
+    # mktxp 读的是 /etc/mktxp, 不是 /root/mktxp。挂错了的表现极具迷惑性:
+    # 三个容器全 healthy、页面 200, 但 mktxp 悄悄用镜像自带的示例配置去连
+    # Sample-Router@192.168.88.1, 于是面板上什么都没有 —— 这是干净房间实测踩到的。
+    volumes: ["./exporters/mktxp:/etc/mktxp"]
 
   # ── Proxmox VE ──────────────────────────────────────────────────────────
   pve-exporter:
