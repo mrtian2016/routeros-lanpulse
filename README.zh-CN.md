@@ -67,6 +67,9 @@ cp .env.example .env                   # 填密码
 docker compose --profile router up -d  # 只跑面板 + Prometheus + RouterOS 采集
 ```
 
+> 以后更新：`git pull && docker compose pull && docker compose up -d`。
+> 自己改过代码就加 `--build` —— `up -d` 在镜像 tag 已存在时**不会**重新构建。
+
 打开 `http://<你的主机>:9132`。
 
 `--profile` 决定跑哪些采集器，只跑你真有的：

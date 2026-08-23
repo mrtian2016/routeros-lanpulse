@@ -78,6 +78,9 @@ cp .env.example .env                   # your passwords
 docker compose --profile router up -d
 ```
 
+> Updating later: `git pull && docker compose pull && docker compose up -d`.
+> If you changed the code yourself, add `--build`.
+
 Open `http://<your-host>:9132`.
 
 Profiles select which exporters run — start only what you actually have:

@@ -1,7 +1,8 @@
 # ============================================================================
 #  lanpulse 配置。复制为 config.toml 后按注释改。
 #  设计原则: 这里只放"身份"(地址/名字/开关), 不放逻辑。
-#  没有的模块把 enabled 设成 false, 对应面板会自动隐藏, 不会留下一片空白或红叉。
+#  除了 [router], **可选模块默认全部关闭** —— 先把路由器跑通看到数据,
+#  再逐个打开你真有的那些。关着的模块对应面板不显示, 也不会触发自检告警。
 # ============================================================================
 
 [site]
@@ -35,14 +36,14 @@ fast_lane = true
 # 跑入口服务(反代/代理)和组网(OpenVPN/Tailscale)的那台机器。没有就 enabled = false。
 # 需要在它上面装 node_exporter, 并放置 exporters/textfile/ 里的采集脚本。
 [edge]
-enabled = true
+enabled = false
 instance = "192.168.1.11:9100"
 label = "edge"
 
 # ── Proxmox VE (可选) ───────────────────────────────────────────────────────
 # 指标来自 prometheus-pve-exporter
 [pve]
-enabled = true
+enabled = false
 instance = "192.168.1.10:9100"         # 宿主机的 node_exporter
 memory_total_gb = 32               # 用于"VM 已用内存"进度条的分母
 
@@ -71,18 +72,18 @@ memory_total_gb = 32               # 用于"VM 已用内存"进度条的分母
 
 # ── 群晖 NAS (可选, SNMP) ───────────────────────────────────────────────────
 [nas]
-enabled = true
+enabled = false
 title = "NAS"
 hint = "SNMPv3 · 存储 / 硬盘 / UPS"
 
 # ── UniFi 无线 (可选) ───────────────────────────────────────────────────────
 [unifi]
-enabled = true
+enabled = false
 
 # ── NetFlow (可选) ──────────────────────────────────────────────────────────
 # 路由器开 /ip/traffic-flow 指向本项目自带的收集器
 [netflow]
-enabled = true
+enabled = false
 url = "http://netflow:9133"
 
 
