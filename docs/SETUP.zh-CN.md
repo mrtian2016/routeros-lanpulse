@@ -87,7 +87,7 @@ mktxp 和 lanpulse 的 1 秒快车道都走 8728 的二进制 API。
 | 设备名 | 第 1–2 步 + 路由器上跑着 DHCP server |
 | **内网设备流量** | **第 3 步** |
 | 设备去向桑基图 | 第 4 步 + `--profile netflow` |
-| 入口 / 分支隧道 / tailnet | textfile 采集器，见 [exporters/textfile](../exporters/textfile/README.md) |
+| 入口 / 分支隧道 / tailnet | textfile 采集器，见 [exporters/textfile](../exporters/textfile/README.zh-CN.md) |
 | 硬件、Proxmox、NAS、无线 | 对应的可选 profile |
 
 ## 还是空的？

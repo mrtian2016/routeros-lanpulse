@@ -8,7 +8,7 @@
 
 `RouterOS` · `Prometheus` · `零构建` · `中/英` · `亮/暗`
 
-[**在线演示**](https://mrtian2016.github.io/routeros-lanpulse/) · [English](README.md) · [**路由器侧配置**](docs/SETUP.zh-CN.md) · [配置说明](docs/CONFIG.md)
+[**在线演示**](https://mrtian2016.github.io/routeros-lanpulse/) · [English](README.md) · [**路由器侧配置**](docs/SETUP.zh-CN.md) · [配置说明](docs/CONFIG.zh-CN.md)
 
 </div>
 

@@ -1,183 +1,204 @@
 # ============================================================================
-#  lanpulse 配置。复制为 config.toml 后按注释改。
-#  设计原则: 这里只放"身份"(地址/名字/开关), 不放逻辑。
-#  除了 [router], **可选模块默认全部关闭** —— 先把路由器跑通看到数据,
-#  再逐个打开你真有的那些。关着的模块对应面板不显示, 也不会触发自检告警。
+#  lanpulse configuration. Copy to config.toml and edit.
+#
+#  This file holds identities only — addresses, names, switches. Never secrets:
+#  passwords live in .env, so you can paste this file into an issue as-is.
+#
+#  Apart from [router], every module is DISABLED by default. Get the router
+#  working first, then turn on the ones you actually have. A disabled module
+#  hides its panels and is skipped by the startup self-check.
+#
+#  Do the router-side setup first: docs/SETUP.md
 # ============================================================================
 
 [site]
-title = "lanpulse"                 # 页头标题, 随便改
-# 页眉右上角的小字; 留空显示 "实时 · Prometheus"
+title = "lanpulse"                 # Page heading. Anything you like.
+# Small text next to the live indicator. Empty falls back to the built-in label.
 note = ""
-# 时区只影响事件时间戳的显示
+# Only affects how event timestamps are displayed.
 timezone = "Asia/Shanghai"
 
 [prometheus]
 url = "http://prometheus:9090"
-# 速率计算窗口。mktxp 默认 15s 抓一次, 窗口小于 30s 会算不出值
+# Rate window. mktxp scrapes every 15 s by default, so anything under 30 s
+# will not produce a value.
 rate_window = "1m"
 
-# ── 路由器 (RouterOS) ────────────────────────────────────────────────────────
-# 指标来自 mktxp (https://github.com/akpw/mktxp)
+# ── Router (RouterOS) ───────────────────────────────────────────────────────
+# Metrics come from mktxp (https://github.com/akpw/mktxp).
 [router]
 enabled = true
-label = "RouterOS"                 # 画在拓扑图上的名字
-name = "ROS"                       # mktxp 配置里的 [段名], 会变成 routerboard_name 标签
-host = "192.168.1.1"                  # 二进制 API 地址, 用于 1 秒粒度快车道
+label = "RouterOS"                 # Name drawn on the topology diagram
+name = "ROS"                       # Section name in mktxp.conf — becomes the
+                                   # routerboard_name label. These MUST match.
+host = "192.168.1.1"               # Binary API address, used by the 1-second fast lane
 port = 8728
-user = "mon"                       # 密码走环境变量 ROS_PASS, 不写在配置里
-wan_interface = "pppoe-out1"       # WAN 接口名; 拨号是 pppoe-outN, 静态/DHCP 填物理口名
-lan_interface = "bridge"           # LAN 网桥名
-wg_interface_regex = "wg.*"        # WireGuard 接口名的正则
-# 每秒直连路由器算速率。设 false 则全部走 Prometheus (粒度 = 抓取间隔, 会一顿一顿的)
+user = "mon"                       # Password goes in .env as ROS_PASS, not here
+wan_interface = "pppoe-out1"       # pppoe-outN when dialling; the physical port
+                                   # name (e.g. ether1) for static IP or DHCP
+lan_interface = "bridge"           # Bridge name
+wg_interface_regex = "wg.*"        # Regex matching your WireGuard interfaces
+# Read counters straight from the router once a second. Turn off and everything
+# falls back to Prometheus — the granularity of your scrape interval, which
+# makes the page move in visible steps instead of flowing.
 fast_lane = true
 
-# ── 边缘主机 (可选) ─────────────────────────────────────────────────────────
-# 跑入口服务(反代/代理)和组网(OpenVPN/Tailscale)的那台机器。没有就 enabled = false。
-# 需要在它上面装 node_exporter, 并放置 exporters/textfile/ 里的采集脚本。
+# ── Edge host (optional) ────────────────────────────────────────────────────
+# The machine that terminates your tunnels and reverse proxies. Requires
+# node_exporter plus the collectors in exporters/textfile/ — see its README.
 [edge]
 enabled = false
 instance = "192.168.1.11:9100"
 label = "edge"
 
-# ── Proxmox VE (可选) ───────────────────────────────────────────────────────
-# 指标来自 prometheus-pve-exporter
+# ── Proxmox VE (optional) ───────────────────────────────────────────────────
+# Metrics from prometheus-pve-exporter.
 [pve]
 enabled = false
-instance = "192.168.1.10:9100"         # 宿主机的 node_exporter
-memory_total_gb = 32               # 用于"VM 已用内存"进度条的分母
+instance = "192.168.1.10:9100"     # node_exporter on the hypervisor
+memory_total_gb = 32               # Denominator for the "guest memory used" bar
 
-# ── 硬件面板 (0..n 台) ──────────────────────────────────────────────────────
-# 每有一台带 IPMI/BMC 的机器就加一段 [[hardware]]。**默认全部注释掉** ——
-# 一台都没有时不该看到空面板; 有的话把对应几行取消注释再改。
+# ── Hardware panels (0..n) ──────────────────────────────────────────────────
+# One [[hardware]] block per machine with a BMC. All commented out by default —
+# with no such machine you should not be looking at empty panels.
 #
 # [[hardware]]
-# key = "host-a"                     # 内部标识, 任意但要唯一
-# title = "Proxmox 宿主机"
+# key = "host-a"                     # Internal id. Anything, but must be unique.
+# title = "Proxmox host"
 # hint = "BMC 192.168.1.20"
-# bmc = "host-a"                     # ipmi-exporter 配置里的 target 名 (bmc 标签)
-# instance = "192.168.1.10:9100"     # 同一台机器的 node_exporter
-# storage = "pve"                    # pve = 显示 PVE 存储池 | fs = 显示本机文件系统 | none
-# nvme = true                        # 显示 NVMe 温度/寿命 (需要 nvme textfile 采集)
+# bmc = "host-a"                     # Target name in ipmi-exporter (the bmc label)
+# instance = "192.168.1.10:9100"     # node_exporter on the SAME machine
+# storage = "pve"                    # pve = PVE storage pools | fs = filesystems | none
+# nvme = true                        # Show NVMe temperature and wear
 #
 # [[hardware]]
 # key = "host-b"
-# title = "应用服务器"
+# title = "Application server"
 # hint = "BMC 192.168.1.21"
 # bmc = "host-b"
 # instance = "192.168.1.15:9100"
 # storage = "fs"
 # nvme = false
 
-
-# ── 群晖 NAS (可选, SNMP) ───────────────────────────────────────────────────
+# ── NAS (optional, SNMP) ────────────────────────────────────────────────────
 [nas]
 enabled = false
 title = "NAS"
-hint = "SNMPv3 · 存储 / 硬盘 / UPS"
+hint = "SNMPv3 · volumes / disks / UPS"
 
-# ── UniFi 无线 (可选) ───────────────────────────────────────────────────────
+# ── UniFi wireless (optional) ───────────────────────────────────────────────
 [unifi]
 enabled = false
 
-# ── NetFlow (可选) ──────────────────────────────────────────────────────────
-# 路由器开 /ip/traffic-flow 指向本项目自带的收集器
+# ── NetFlow (optional) ──────────────────────────────────────────────────────
+# Point the router's /ip/traffic-flow at the bundled collector — see docs/SETUP.md.
 [netflow]
 enabled = false
 url = "http://netflow:9133"
 
-
-# ── 设备命名 ────────────────────────────────────────────────────────────────
-# 路由器只能从 DHCP 租约拿到设备名。用 cloud-init 固定 IP 的虚拟机、或者手工配静态 IP 的
-# 机器没有租约, 面板上就只剩一串 MAC —— 在这里给它们起名字。
-# 两张表都是可选的, 不填就显示 MAC / IP。
+# ── Device naming ───────────────────────────────────────────────────────────
+# The router can only name devices it has a DHCP lease for. Machines with a
+# static address (cloud-init VMs, for instance) show up as a bare MAC — name
+# them here. Both tables are optional.
 [hosts.by_mac]
-# "AA:BB:CC:11:22:33" = "监控机"
-# "AA:BB:CC:11:22:34" = "边缘主机"
+# "AA:BB:CC:11:22:33" = "monitoring host"
+# "AA:BB:CC:11:22:34" = "edge host"
 
+# Address -> name, for NetFlow (the sankey and the LAN top list).
 [hosts.by_ip]
-# "192.168.1.1"  = "路由器"
+# "192.168.1.1"  = "router"
 # "192.168.1.50" = "NAS"
 
+# ── Topology diagram ────────────────────────────────────────────────────────
+# Canvas is 960x520. Edit this to draw the shape of YOUR network; delete a node
+# and the links to it disappear with it.
+# core = true draws a heavier border; group = true is a side heading (no box).
 [topology.nodes]
-internet = { x = 80,  y = 250, w = 110, h = 48, name = "Internet", sub = "公网 IPv4" }
+internet = { x = 80,  y = 250, w = 110, h = 48, name = "Internet", sub = "public IPv4" }
 ros      = { x = 330, y = 250, w = 140, h = 56, name = "RouterOS", sub = "192.168.1.1 · NAT / FW / WG", core = true }
-lan      = { x = 600, y = 250, w = 140, h = 56, name = "内网 / 交换机", sub = "192.168.1.0/24", core = true }
-edge     = { x = 600, y = 395, w = 150, h = 56, name = "edge", sub = "192.168.1.11 · 入口 / 组网", core = true }
-unifi    = { x = 600, y = 110, w = 130, h = 48, name = "UniFi AP", sub = "192.168.1.30 · 无线" }
+lan      = { x = 600, y = 250, w = 140, h = 56, name = "LAN / switch", sub = "192.168.1.0/24", core = true }
+edge     = { x = 600, y = 395, w = 150, h = 56, name = "edge", sub = "192.168.1.11 · ingress / mesh", core = true }
+unifi    = { x = 600, y = 110, w = 130, h = 48, name = "UniFi AP", sub = "192.168.1.30 · Wi-Fi" }
 wgg      = { x = 60,  y = 40,  w = 0,   h = 0,  name = "WireGuard peers", group = true }
-ovg      = { x = 60,  y = 460, w = 0,   h = 0,  name = "OpenVPN 用户",    group = true }
-ing      = { x = 830, y = 180, w = 0,   h = 0,  name = "入口 / 公网服务", group = true }
-brg      = { x = 830, y = 355, w = 0,   h = 0,  name = "分支站点",        group = true }
-tsg      = { x = 830, y = 470, w = 0,   h = 0,  name = "tailnet",         group = true }
+ovg      = { x = 60,  y = 460, w = 0,   h = 0,  name = "OpenVPN users",   group = true }
+ing      = { x = 830, y = 180, w = 0,   h = 0,  name = "ingress / public", group = true }
+brg      = { x = 830, y = 355, w = 0,   h = 0,  name = "branch sites",     group = true }
+tsg      = { x = 830, y = 470, w = 0,   h = 0,  name = "tailnet",          group = true }
 
-# ── 脱敏 ────────────────────────────────────────────────────────────────────
-# 开了之后 /api/state.json 里的公网 IP、内网 IP、设备名会被替换成稳定的假名,
-# 同一台设备每次替换结果一致。截图发到网上之前打开它。
+# ── Redaction ───────────────────────────────────────────────────────────────
+# Replaces public IPs, private IPs, MACs, domains, device names and site names
+# with deterministic pseudonyms in /api/state.json. Turn it on before you post
+# a screenshot anywhere public.
 [redact]
 enabled = false
-# 保留内网网段结构(只改末位)还是整个换掉
+# Keep the subnet structure (only the last octet changes) or replace outright.
 keep_subnet = true
-# 连 CPU/硬盘型号也隐藏。默认 false —— 晒 homelab 截图时硬件型号往往正是想给人看的部分,
-# 而且它不指向具体的人。要发到完全公开的地方可以打开。
+# Hide CPU / disk / board models too. Off by default — when people share homelab
+# screenshots the hardware is usually the part they want to show, and a model
+# number does not point at a person. Turn it on for a fully public demo.
 mask_hardware = false
 
-# ── 事件 ────────────────────────────────────────────────────────────────────
+# ── Events ──────────────────────────────────────────────────────────────────
 [events]
-buffer = 200                       # 事件缓冲条数 (内存, 重启清空)
-wan_burst_floor_mbps = 8           # WAN 突发门槛
-device_burst_floor_mbps = 5        # 内网设备突发门槛
-ingress_burst_floor_mbps = 1       # 入口/隧道突发门槛
-burst_multiplier = 4               # 超过近期均值多少倍算突发
-burst_cooldown_sec = 60            # 同一对象多久内不重复报
-ovpn_burst_floor_mbps = 3          # OpenVPN 拨入用户突发门槛
-disk_warn_pct = 85                 # 磁盘/存储占用超过多少报警
-# 事件级别: info | warn | bad。级别决定颜色, 也决定 [alerts].levels 收不收。
-# 想让突发只显示在面板、永不推送手机, 把 burst_level 改成 "info" 即可。
-burst_level = "warn"               # 流量突发事件的级别
-threshold_level = "warn"           # 温度/磁盘越线事件的级别
+buffer = 200                       # Events kept in memory (cleared on restart)
+wan_burst_floor_mbps = 8           # WAN burst threshold
+device_burst_floor_mbps = 5        # LAN device burst threshold
+ingress_burst_floor_mbps = 1       # Ingress / tunnel burst threshold
+burst_multiplier = 4               # How many times the recent average counts as a burst
+burst_cooldown_sec = 60            # Do not re-report the same subject within this
+ovpn_burst_floor_mbps = 3          # OpenVPN dial-in user burst threshold
+disk_warn_pct = 85                 # Warn above this disk / storage usage
+# Event levels: info | warn | bad. The level drives the colour, and decides
+# whether [alerts].levels picks it up. Set burst_level = "info" to keep bursts
+# on the dashboard but never push them to your phone.
+burst_level = "warn"               # Level of traffic-burst events
+threshold_level = "warn"           # Level of temperature / disk threshold events
 
-# ── 告警外发 ────────────────────────────────────────────────────────────────
-# 把事件推到手机。密钥走环境变量, 不写在这里:
+# ── Alerting ────────────────────────────────────────────────────────────────
+# Push events to your phone. Credentials go in .env, not here:
 #   BARK_KEY / TELEGRAM_TOKEN / TELEGRAM_CHAT_ID
 [alerts]
 enabled = false
-lang = "zh"                        # 通知文案语言: zh | en
-levels = ["warn", "bad"]           # 哪些级别外发。info 一般是噪音, 默认不发
-cooldown_sec = 300                 # 同一条文案多久内不重复发
-startup_quiet_sec = 60             # 启动后静默多久 —— 刚起来会重放路由器日志缓冲区, 不静默会炸一屏
-max_per_hour = 20                  # 每小时上限。太吵的告警等于没有告警
-# 突发类事件(burst/ingress)单独的推送门槛, 单位 Mbps。0 = 不额外过滤。
-# 面板那边 [events] 的门槛调低是为了看趋势(8 Mbps 就标出来), 但一次正常下载
-# 没必要响手机 —— 这里设 200 之类的值, 只有真的异常大流量才推。
+lang = "zh"                        # Notification language: zh | en
+levels = ["warn", "bad"]           # Which levels get pushed. info is usually noise.
+cooldown_sec = 300                 # Do not repeat the same text within this
+startup_quiet_sec = 60             # Quiet period after start — the router's log
+                                   # buffer gets replayed on boot; without this
+                                   # every restart fires a screenful
+max_per_hour = 20                  # Hourly cap. Alerts that are too noisy get ignored.
+# Separate push threshold for burst events, in Mbps. 0 = no extra filter.
+# The [events] floors are set low so you can see trends on the dashboard, but a
+# normal download should not buzz your phone — set this to 200 or so and only
+# genuinely unusual volume gets pushed.
 min_burst_mbps = 0
 
-# 分事件类型的推送开关。**关掉的类型仍然显示在面板上, 只是不推手机。**
-# 默认值按"是否需要你动手"来定: 要处理的默认开, 信息性的默认关。
-# 设置页上有对应的开关, 改那边和改这里等价。
-# 配置里没列到的类型默认**推送** —— 升级带来新类型时宁可吵一下, 也别静默吞掉。
+# Per-event-type push switches. Types that are OFF still appear on the dashboard,
+# they just do not reach your phone. Defaults follow one rule: does this need you
+# to do something? Actionable types on, informational off.
+# Types missing from this table default to ON — when an upgrade adds a new event
+# type, being briefly noisy beats silently swallowing it.
 [alerts.kinds]
-hw = true                          # 硬件: 温度越线 / 风扇停转 / 磁盘写满 / RAID 异常
-branch = true                      # 分支隧道中断与恢复
-wan = true                         # WAN 拨号上下线
-vm = true                          # 虚拟机启停
-ovpn = true                        # OpenVPN 拨入用户上下线
-wg = false                         # WireGuard peer 上下线 (手机常切网, 比较碎)
-ts = false                         # tailnet 节点上下线
-lan = false                        # 内网设备接入 / 离开
-wifi = false                       # 无线接入 / 离开 / 漫游
-ingress = false                    # 入口连接数变化
-burst = false                      # 流量突发 (家用场景通常是"有意思"而不是"要处理")
+hw = true                          # Hardware: temperature / fans / disk full / RAID
+branch = true                      # Branch tunnels going down and coming back
+wan = true                         # WAN link up/down
+vm = true                          # Guests starting and stopping
+ovpn = true                        # OpenVPN dial-in users
+wg = false                         # WireGuard peers (phones roam; this gets chatty)
+ts = false                         # tailnet nodes
+lan = false                        # LAN devices joining / leaving
+wifi = false                       # Wi-Fi join / leave / roam
+ingress = false                    # Ingress connection counts
+burst = false                      # Traffic bursts (usually interesting, not actionable)
 
 [alerts.bark]
 enabled = false
-server = "https://api.day.app"     # 自建服务器就填自己的
+server = "https://api.day.app"     # Point at your own server if you self-host
 group = "lanpulse"
-sound = ""                         # 留空用默认铃声
+sound = ""                         # Empty = default
 icon = ""
 
 [alerts.telegram]
 enabled = false
-# Telegram 官方 API 在部分地区不可达。可以指到自建反代, 或者给容器设 https_proxy
-# 环境变量走代理 (urllib 默认就认这个变量)。
+# Telegram's API is unreachable from some regions. Point this at your own reverse
+# proxy, or set https_proxy on the container (urllib honours it by default).
 api_base = "https://api.telegram.org"

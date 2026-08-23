@@ -1,16 +1,16 @@
-# lanpulse —— 用 profile 控制启用哪些采集器, 只跑你真有的东西:
+# lanpulse — profiles decide which exporters run. Start only what you actually have:
 #
-#   docker compose up -d                                  # 只有面板 + Prometheus
+#   docker compose up -d                                  # dashboard + Prometheus only
 #   docker compose --profile router up -d                 # + RouterOS (mktxp)
 #   docker compose --profile router --profile pve up -d   # + Proxmox VE
-#   docker compose --profile all up -d                    # 全套
+#   docker compose --profile all up -d                    # everything
 #
-# 第一次跑之前:
-#   cp config.example.toml config.toml   并按里面的注释改
-#   cp .env.example .env                 填各服务的密码
+# Before the first run:
+#   cp config.example.toml config.toml   and edit it (every option is commented)
+#   cp .env.example .env                 and fill in the passwords
 services:
   lanpulse:
-    # 默认拉预构建镜像; 想跑本地改动就 `docker compose up -d --build`
+    # Pulls the prebuilt image by default. To run local changes: docker compose up -d --build
     image: ghcr.io/mrtian2016/routeros-lanpulse:latest
     build: .
     pull_policy: missing
@@ -18,13 +18,14 @@ services:
     restart: unless-stopped
     ports: ["${BIND_ADDR:-0.0.0.0}:${LANPULSE_PORT:-9132}:9132"]
     volumes:
-      # 可写: 设置页要往回写。不想让网页改配置就改成 :ro, 设置页会提示写入失败。
+      # Writable so the settings page can save. Make it :ro if you never want the
+      # browser to change config — the settings page will then report a write failure.
       - ./config.toml:/app/config.toml:rw
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       PROM: http://prometheus:9090
-      ROS_PASS: ${ROS_PASS:-}          # 路由器只读账号密码, 不写进 config.toml
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}   # 不设则设置页关闭 (fail-closed)
+      ROS_PASS: ${ROS_PASS:-}          # Router read-only password; never in config.toml
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}   # Unset = settings page disabled (fail-closed)
       BARK_KEY: ${BARK_KEY:-}
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
@@ -43,15 +44,16 @@ services:
       - prom-data:/prometheus
     ports: ["${BIND_ADDR:-127.0.0.1}:9090:9090"]
 
-  # ── RouterOS 指标 ────────────────────────────────────────────────────────
+  # ── RouterOS metrics ─────────────────────────────────────────────────────
   mktxp:
     image: ghcr.io/akpw/mktxp:latest
     container_name: lanpulse-mktxp
     restart: unless-stopped
     profiles: [router, all]
-    # mktxp 读的是 /etc/mktxp, 不是 /root/mktxp。挂错了的表现极具迷惑性:
-    # 三个容器全 healthy、页面 200, 但 mktxp 悄悄用镜像自带的示例配置去连
-    # Sample-Router@192.168.88.1, 于是面板上什么都没有 —— 这是干净房间实测踩到的。
+    # mktxp reads /etc/mktxp, NOT /root/mktxp. Getting this wrong is deceptive:
+    # all three containers report healthy and the page returns 200, but mktxp
+    # quietly falls back to the image's sample config and tries to reach
+    # Sample-Router@192.168.88.1, so the dashboard stays empty.
     volumes: ["./exporters/mktxp:/etc/mktxp"]
 
   # ── Proxmox VE ──────────────────────────────────────────────────────────
@@ -66,7 +68,7 @@ services:
       PVE_TOKEN_VALUE: ${PVE_TOKEN_VALUE:-}
       PVE_VERIFY_SSL: "false"
 
-  # ── IPMI (超微/戴尔等带 BMC 的机器) ──────────────────────────────────────
+  # ── IPMI (any machine with a BMC) ────────────────────────────────────────
   ipmi-exporter:
     image: prometheuscommunity/ipmi-exporter:latest
     container_name: lanpulse-ipmi-exporter
@@ -75,7 +77,7 @@ services:
     volumes: ["./exporters/ipmi/ipmi.yml:/config.yml:ro"]
     command: ["--config.file=/config.yml"]
 
-  # ── SNMP (群晖 / 交换机) ────────────────────────────────────────────────
+  # ── SNMP (NAS / switches) ────────────────────────────────────────────────
   snmp-exporter:
     image: prom/snmp-exporter:latest
     container_name: lanpulse-snmp-exporter
@@ -83,7 +85,7 @@ services:
     profiles: [snmp, all]
     volumes: ["./exporters/snmp/snmp.yml:/etc/snmp_exporter/snmp.yml:ro"]
 
-  # ── NetFlow v9 收集器 (本项目自带) ──────────────────────────────────────
+  # ── NetFlow v9 collector (bundled) ───────────────────────────────────────
   netflow:
     build: ./exporters/netflow
     container_name: lanpulse-netflow
@@ -93,7 +95,7 @@ services:
     environment:
       LAN_CIDR: ${LAN_CIDR:-192.168.1.0/24}
 
-  # ── UniFi (本项目自带, 用 API Key) ──────────────────────────────────────
+  # ── UniFi (bundled, API-key based) ───────────────────────────────────────
   unifi-exporter:
     build: ./exporters/unifi
     container_name: lanpulse-unifi-exporter

@@ -1,4 +1,5 @@
-# ipmi-exporter。每台机器的 BMC 用户名/密码在这里, target 名要和 config.toml 的 hardware.bmc 对上。
+# ipmi-exporter. One entry per BMC credential set.
+# The target names you scrape must match hardware.bmc in config.toml.
 modules:
   default:
     user: "ADMIN"

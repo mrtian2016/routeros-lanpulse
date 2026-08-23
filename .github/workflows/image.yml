@@ -1,5 +1,6 @@
-# 构建并推送容器镜像到 ghcr.io。
-# 这样用户 `docker compose up -d` 是拉现成镜像, 而不是在自己机器上编译 —— 快, 也少一类环境问题。
+# Build and push the container image to ghcr.io.
+# This way `docker compose up -d` pulls a prebuilt image instead of compiling
+# locally — faster, and one fewer class of environment problem.
 name: Build and publish image
 
 on:
@@ -36,7 +37,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          # 树莓派 / ARM 软路由旁边的小机器也不少, 顺手出个 arm64
+          # Plenty of people run this next to an ARM box, so build arm64 too
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

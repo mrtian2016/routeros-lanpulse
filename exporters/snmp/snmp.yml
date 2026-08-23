@@ -1,11 +1,12 @@
-# snmp-exporter 模块定义。这里只给一个群晖的最小示例;
-# 完整 OID 表建议用官方 generator 生成: https://github.com/prometheus/snmp_exporter
+# snmp-exporter modules. Minimal Synology example below.
+# For a complete OID table use the official generator:
+# https://github.com/prometheus/snmp_exporter
 modules:
   synology:
     walk:
-      - 1.3.6.1.4.1.6574.1      # synoSystem: 系统状态 / 温度
-      - 1.3.6.1.4.1.6574.2      # synoDisk:   硬盘型号 / 温度 / 健康
-      - 1.3.6.1.4.1.6574.3      # synoRaid:   阵列状态
+      - 1.3.6.1.4.1.6574.1      # synoSystem: status / temperature
+      - 1.3.6.1.4.1.6574.2      # synoDisk:   model / temperature / health
+      - 1.3.6.1.4.1.6574.3      # synoRaid:   array status
       - 1.3.6.1.4.1.6574.4      # synoUPS
     version: 3
     auth:

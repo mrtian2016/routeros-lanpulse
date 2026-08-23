@@ -1,7 +1,7 @@
-# lanpulse 用的 Prometheus 配置示例。
-# 只保留你真正有的 job —— 少一个 job, 面板上对应的那块会自动隐藏, 不会报错。
+# Example Prometheus config for lanpulse.
+# Keep only the jobs you actually have. A missing job simply hides its panel.
 global:
-  scrape_interval: 15s          # 面板 1 秒粒度那部分是直连路由器算的, 这里 15s 足够
+  scrape_interval: 15s          # The 1-second lane reads the router directly, so 15s is fine here
   scrape_timeout: 10s
 
 scrape_configs:
@@ -10,21 +10,21 @@ scrape_configs:
     static_configs:
       - targets: ["mktxp:49090"]
 
-  # ── 各主机 node_exporter ──────────────────────────────────────────────
-  # 边缘主机上还要放 exporters/textfile/ 里的脚本 (隧道/入口/tailscale 采集)
+  # ── node_exporter on each host ────────────────────────────────────────
+  # The edge host also needs the collectors from exporters/textfile/
   - job_name: node
     static_configs:
       - targets:
-          - "192.168.1.10:9100"     # Proxmox 宿主机
-          - "192.168.1.11:9100"     # edge
-          - "192.168.1.15:9100"    # 应用服务器
+          - "192.168.1.10:9100"     # hypervisor
+          - "192.168.1.11:9100"     # edge host
+          - "192.168.1.15:9100"    # application server
 
   # ── Proxmox VE ────────────────────────────────────────────────────────
   - job_name: pve
     metrics_path: /pve
     params: { module: [default] }
     static_configs:
-      - targets: ["192.168.1.10"]   # 这里填 PVE 主机地址
+      - targets: ["192.168.1.10"]   # hypervisor address
     relabel_configs:
       - { source_labels: [__address__], target_label: __param_target }
       - { source_labels: [__param_target], target_label: instance }
@@ -34,13 +34,13 @@ scrape_configs:
   - job_name: ipmi
     metrics_path: /ipmi
     static_configs:
-      - targets: ["192.168.1.20", "192.168.1.21"]   # 各机器的 BMC 地址
+      - targets: ["192.168.1.20", "192.168.1.21"]   # BMC addresses
     relabel_configs:
       - { source_labels: [__address__], target_label: __param_target }
       - { source_labels: [__param_target], target_label: bmc }
       - { target_label: __address__, replacement: "ipmi-exporter:9290" }
 
-  # ── SNMP (群晖 / 交换机) ──────────────────────────────────────────────
+  # ── SNMP (NAS / switches) ─────────────────────────────────────────────
   - job_name: snmp
     metrics_path: /snmp
     params: { module: [synology] }
@@ -51,7 +51,7 @@ scrape_configs:
       - { source_labels: [__param_target], target_label: instance }
       - { target_label: __address__, replacement: "snmp-exporter:9116" }
 
-  # ── 本项目自带的两个采集器 ────────────────────────────────────────────
+  # ── The two collectors bundled with this project ──────────────────────
   - job_name: netflow
     static_configs: [{ targets: ["netflow:9133"] }]
   - job_name: unifi

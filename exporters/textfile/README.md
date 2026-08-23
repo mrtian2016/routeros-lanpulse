@@ -15,7 +15,7 @@ On the edge host, as root:
 ```bash
 # 1. node_exporter with the textfile collector pointed at a directory
 mkdir -p /var/lib/prometheus/node-exporter
-#Debian/Ubuntu 的包用这个文件传参数, 不要改 systemd unit
+#On Debian/Ubuntu the package reads its flags from this file — do not edit the unit
 echo 'ARGS="--collector.textfile.directory=/var/lib/prometheus/node-exporter"' \
   >> /etc/default/prometheus-node-exporter
 systemctl restart prometheus-node-exporter
@@ -81,14 +81,15 @@ systemctl daemon-reload
 systemctl enable --now edge-ingress-stat.service lanpulse-textfile.timer
 ```
 
-> **不要用 cron。** Debian/Ubuntu 的云镜像默认**不装 cron**（`dpkg -l cron` 显示 `un`），
-> 往 `/etc/cron.d/` 丢文件是静默失效的 —— 文件在、语法对、永远不执行。用 systemd timer。
+> **Do not use cron.** Debian/Ubuntu cloud images ship **without cron installed**
+> (`dpkg -l cron` shows `un`), so dropping a file into `/etc/cron.d/` fails silently —
+> the file is there, the syntax is right, and it never runs. Use a systemd timer.
 
 ## Verify
 
 ```bash
-ls -la /var/lib/prometheus/node-exporter/     # 应该有 .prom 文件
-curl -s localhost:9100/metrics | grep -c edge_   # 应该 > 0
+ls -la /var/lib/prometheus/node-exporter/        # should contain .prom files
+curl -s localhost:9100/metrics | grep -c edge_   # should be > 0
 ```
 
 Then add the host to `prometheus.yml` under the `node` job, and set `[edge] instance` in
