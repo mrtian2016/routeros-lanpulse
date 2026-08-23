@@ -170,10 +170,16 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     return g;
   };
   const groupLabel = (x, y, text, color) => { const t = el('text', { x, y, class: 'elabel' }, nodesLayer); t.textContent = text; t.setAttribute('fill', color); };
+  // 9.5px 等宽字约 5.7px 一个字符; 左边距 8, 右侧还要给状态点留 16
+  const fitLabel = (s2, w) => {
+    const max = Math.max(4, Math.floor((w - 24) / 5.7));
+    return s2.length > max ? s2.slice(0, max - 1) + '…' : s2;
+  };
   const peerNode = (p, color, label, sub) => {
     const g = el('g', { class: 'node small' }, nodesLayer);
     el('rect', { x: p.node.x, y: p.node.y, width: p.node.w, height: p.node.h, rx: 4 }, g);
-    const t = el('text', { x: p.node.x + 8, y: p.node.y + p.node.h / 2 + 3, class: 'sub' }, g); t.textContent = label; p.labelEl = t;
+    const t = el('text', { x: p.node.x + 8, y: p.node.y + p.node.h / 2 + 3, class: 'sub' }, g);
+    t.textContent = fitLabel(label, p.node.w); p.labelEl = t;
     p.dot = el('circle', { cx: p.node.x + p.node.w - 9, cy: p.node.y + p.node.h / 2, r: 3.5, fill: color }, g);
     g.addEventListener('mousemove', ev => showTip(ev, sub()));
     g.addEventListener('mouseleave', hideTip);
@@ -620,7 +626,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       d.name = src ? src.name : ''; d.down = src ? src.down : 0; d.up = src ? src.up : 0;
       d.g.setAttribute('opacity', src ? 1 : 0);
       if (!src) return;
-      const nm = d.name.length > 15 ? d.name.slice(0, 14) + '…' : d.name;
+      const nm = fitLabel(d.name, d.node.w - 42);   // 右侧速率列占掉一块
       if (d.nameEl.textContent !== nm) d.nameEl.textContent = nm;
       d.rateEl.textContent = fmt(d.down + d.up);
     });
@@ -632,7 +638,8 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     (S.ingress_meta || []).forEach(m => {
       const c = ingLabels.find(x => x.k === m.k); if (!c) return;
       c.label = m.id;   // 后端已给出短标签; 端口清单在悬浮提示里, 拼上去会溢出节点框
-      if (c.labelEl && c.labelEl.textContent !== c.label) c.labelEl.textContent = c.label;
+      const lb = fitLabel(c.label, c.node.w);
+      if (c.labelEl && c.labelEl.textContent !== lb) c.labelEl.textContent = lb;
     });
     const ingConns = (S.ingress_detail || []).reduce((a, r) => a + (+r.conns || 0), 0);
     const ingMbps = val(S.ingress, 'trojan') + val(S.ingress, 'https') + val(S.ingress, 'wg');
