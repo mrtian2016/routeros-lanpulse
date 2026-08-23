@@ -366,11 +366,11 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   }
 
   function renderWifi() {
+    // 直接按 id 写, 不再用 closest() 摸索父容器 —— 这样"哪个元素由谁填充"是可审计的
     const ap = (S.ap || [])[0];
     if (ap) {
-      const box = document.querySelector('#wifi-table').closest('.panel, .card, section');
-      const h = box && box.querySelector('h2 .hint');
-      if (h && !h.dataset.done) { h.dataset.done = 1; h.textContent = `${ap.model} · ${ap.ip} · fw ${ap.fw}`; }
+      setText('wifi-title', `${t('无线接入')} · ${ap.model}`);
+      setText('wifi-hint', `${ap.ip} · fw ${ap.fw}`);
     }
     const w = S.wifi || [], r24 = (S.radios || []).find(x => x.band === '2.4G') || {}, r5 = (S.radios || []).find(x => x.band === '5G') || {};
     const uw = document.querySelector('#wifi-table').closest('.panel').querySelector('.util');
