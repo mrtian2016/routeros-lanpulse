@@ -92,7 +92,15 @@
     "服务端": "server",
     "当前无拨入会话": "no active dial-in sessions",
     "暂无 24 小时数据": "no 24 h data yet",
-    "5 分钟均值": "5-minute average"
+    "5 分钟均值": "5-minute average",
+    "粒度": " resolution",
+    "悬停看数值": "hover for values",
+    "WAN 流量": "WAN traffic",
+    "30 分钟": "30 min",
+    "1 小时": "1 h",
+    "12 小时": "12 h",
+    "秒": "s",
+    "分钟": "min"
   },
   "events": [
     [

@@ -36,10 +36,13 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       if (d && d.state) { S = d.state; S.demo = true; } else { S.ready = false; }
     }
   };
+  // WAN 曲线的时间档位。默认值和可选项都来自后端配置, 前端不写死。
+  const HR_KEY = 'lanpulse.hist.range';
+  let HIST_RANGE = localStorage.getItem(HR_KEY) || CFG.hist_default || '1h';
   const pullHist = async () => {
     if (STATIC_DEMO) { HIST = DEMO().history || HIST; return; }
     try {
-      const r = await fetch('api/history.json', { cache: 'no-store' });
+      const r = await fetch('api/history.json?range=' + encodeURIComponent(HIST_RANGE), { cache: 'no-store' });
       if (r.ok) { HIST = await r.json(); return; }
       throw new Error(r.status);
     } catch (e) {
@@ -391,7 +394,25 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
 
   // ---------- 24h 曲线 ----------
   const hist = document.getElementById('hist');
+  const RANGE_LABEL = { '30m': '30 分钟', '1h': '1 小时', '12h': '12 小时' };
+  function buildRangeButtons() {
+    const box = document.getElementById('hist-range');
+    if (!box) return;
+    const rs = CFG.hist_ranges || [{ k: '1h', step: 30 }];
+    box.innerHTML = rs.map(r =>
+      `<button data-k="${r.k}" class="${r.k === HIST_RANGE ? 'on' : ''}">${RANGE_LABEL[r.k] || r.k}</button>`).join('');
+    box.querySelectorAll('button').forEach(b => b.onclick = async () => {
+      HIST_RANGE = b.dataset.k;
+      localStorage.setItem(HR_KEY, HIST_RANGE);
+      box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.k === HIST_RANGE));
+      await pullHist(); drawHist(); applyLang();
+    });
+  }
+
   function drawHist() {
+    const rs = (CFG.hist_ranges || []).find(r => r.k === HIST_RANGE);
+    const hint = document.getElementById('hist-hint');
+    if (hint && rs) hint.textContent = `${rs.step < 60 ? rs.step + ' 秒' : rs.step / 60 + ' 分钟'}${t('粒度')} · ${t('悬停看数值')}`;
     hist.innerHTML = '';
     // 坐标要用 viewBox 的用户坐标系。原来用 hist.clientWidth 算 x, 而 SVG 上写着
     // viewBox="0 0 1200 170" + preserveAspectRatio="none", 两者不等时整条曲线会被横向压缩。
@@ -596,7 +617,17 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   })();
 
   setInterval(async () => { await pull(); render(); applyLang(); }, 1000);
-  setInterval(async () => { await pullHist(); drawHist(); }, 60000);
+  buildRangeButtons();
+  // 刷新间隔跟着档位走: 30 分钟档没必要 60 秒才动一次
+  let histTimer = null;
+  const scheduleHist = () => {
+    if (histTimer) clearInterval(histTimer);
+    const rs = (CFG.hist_ranges || []).find(r => r.k === HIST_RANGE);
+    const ms = Math.max(10000, ((rs && rs.step) || 30) * 1000);
+    histTimer = setInterval(async () => { await pullHist(); drawHist(); }, ms);
+  };
+  scheduleHist();
+  document.getElementById('hist-range')?.addEventListener('click', () => setTimeout(scheduleHist, 50));
   addEventListener('resize', drawHist);
 
   // 流动动画

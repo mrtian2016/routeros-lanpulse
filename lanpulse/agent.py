@@ -437,12 +437,12 @@ def fast_loop():
         time.sleep(max(0.2, FAST_INTERVAL - (time.time() - t0)))
 
 
-def qrange(expr, hours=24, step=300):
+def qrange(expr, span=3600, step=30):
     """range query -> [[ts, value], ...]"""
     try:
         now = int(time.time())
         u = PROM + "/api/v1/query_range?" + urllib.parse.urlencode(
-            {"query": expr, "start": now - hours * 3600, "end": now, "step": step})
+            {"query": expr, "start": now - span, "end": now, "step": step})
         with urllib.request.urlopen(u, timeout=15) as r:
             d = json.loads(r.read().decode())
         res = d["data"]["result"]
@@ -450,15 +450,32 @@ def qrange(expr, hours=24, step=300):
     except Exception:
         return []
 
-_hist = {"ts": 0, "data": {}}
-def history():
-    """24h WAN 曲线, 5 分钟一点; 60s 缓存"""
-    if time.time() - _hist["ts"] < 60:
-        return _hist["data"]
-    d = {"down": qrange(f'rate(mktxp_interface_rx_byte_total{{name="{WANIF}"}}[5m])'),
-         "up":   qrange(f'rate(mktxp_interface_tx_byte_total{{name="{WANIF}"}}[5m])')}
-    _hist.update(ts=time.time(), data=d)
+# WAN 曲线的时间档位: (总时长秒, 步长秒, rate 窗口)
+# 短档必须同时调小 rate 窗口 —— 30 分钟的图配 [5m] 的 rate, 细节全被抹平了,
+# 看着和 12 小时档没区别。步长也要跟上, 否则点太少画不出形状。
+HIST_RANGES = {
+    "30m": (1800, 15, "1m"),      # 15s 一点 = 120 个点; mktxp 15s 抓一次, 这是理论上限
+    "1h":  (3600, 30, "1m"),      # 120 个点
+    "12h": (43200, 300, "5m"),    # 144 个点
+}
+DEFAULT_RANGE = "1h"
+_hist = {}
+
+
+def history(rng=DEFAULT_RANGE):
+    """WAN 上下行曲线。按档位分别缓存, 缓存时长取步长的一半 —— 短档刷新更勤。"""
+    if rng not in HIST_RANGES:
+        rng = DEFAULT_RANGE
+    span, step, win = HIST_RANGES[rng]
+    c = _hist.setdefault(rng, {"ts": 0.0, "data": {}})
+    if c["data"] and time.time() - c["ts"] < max(10, step / 2):
+        return c["data"]
+    d = {"range": rng, "step": step, "span": span,
+         "down": qrange(f'rate(mktxp_interface_rx_byte_total{{name="{WANIF}"}}[{win}])', span, step),
+         "up":   qrange(f'rate(mktxp_interface_tx_byte_total{{name="{WANIF}"}}[{win}])', span, step)}
+    c.update(ts=time.time(), data=d)
     return d
+
 
 _qerr = set()
 
@@ -1155,6 +1172,8 @@ def ui_config():
         "nas": {"title": CFG["nas"].get("title", "NAS"), "hint": CFG["nas"].get("hint", "")},
         "router": {"label": RT.get("label", "RouterOS")},
         "pve_mem_total": PV.get("memory_total_gb", 32),
+        "hist_ranges": [{"k": k, "step": v[1]} for k, v in HIST_RANGES.items()],
+        "hist_default": DEFAULT_RANGE,
         "redact": bool(CFG["redact"].get("enabled")),
     }
     return _mask_cfg(cfg) if CFG["redact"].get("enabled") else cfg
@@ -1515,7 +1534,8 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         p = self.path.split("?")[0]
         if p in ("/api/history.json", "/history.json"):
-            b = json.dumps(history()).encode()
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+            b = json.dumps(history((qs.get("range") or [DEFAULT_RANGE])[0])).encode()
             self.send_response(200); self.send_header("Content-Type", "application/json")
             self.send_header("Cache-Control", "no-store")
         elif p == "/api/auth.json":
