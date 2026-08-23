@@ -3,7 +3,8 @@
 监听 UDP 2055 收 RouterOS 的 traffic-flow, 在内存里按"内网设备 → 目的分类"聚合,
 HTTP 输出 /api/flows.json 给流向面板的桑基图, /metrics 给 Prometheus。
 不落盘、不依赖 ClickHouse —— 只保留最近 WINDOW 秒的滚动窗口。
-env: LISTEN_PORT(9133), NF_PORT(2055), WINDOW(300), LAN(192.168.1.0/24)
+env: LISTEN_PORT(9133), NF_PORT(2055), WINDOW(300), LAN(192.168.1.0/24),
+     MGMT_HOSTS(空; 逗号分隔, 两端都在其中的流量视为监控自身产生, 丢弃)
 """
 import ipaddress, json, os, socket, struct, threading, time
 from collections import defaultdict
@@ -13,6 +14,11 @@ NF_PORT = int(os.environ.get("NF_PORT", "2055"))
 HTTP_PORT = int(os.environ.get("LISTEN_PORT", "9133"))
 WINDOW = int(os.environ.get("WINDOW", "300"))
 LAN = ipaddress.ip_network(os.environ.get("LAN", "192.168.1.0/24"))
+# Management chatter: flows where BOTH ends are in this set are dropped.
+# Without it the monitoring stack measures itself — the router answering mktxp and the
+# 1-second fast lane easily becomes the single largest "talker" on the sankey, burying
+# the traffic you actually wanted to see. Typically: router + the host running lanpulse.
+MGMT = {x.strip() for x in os.environ.get("MGMT_HOSTS", "").split(",") if x.strip()}
 PRIV = [ipaddress.ip_network(x) for x in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10")]
 
 # NetFlow v9 字段 ID
@@ -118,6 +124,7 @@ def summary():
     for ts, s_, d, dp, pr, b in rows:
         if ts < now - WINDOW: continue
         bits = b * 8 / span / 1e6                       # Mbps 均值
+        if s_ in MGMT and d in MGMT: continue          # 监控自身的往返流量, 不算数据
         si, di = inlan(s_), inlan(d)
         if si and not di:        dev, cat = s_, classify(d, dp, pr)      # 出站 (NAT 前)
         elif di and not si:      dev, cat = d, "公网入站"

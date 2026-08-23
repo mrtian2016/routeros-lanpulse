@@ -392,16 +392,67 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   // ---------- 24h 曲线 ----------
   const hist = document.getElementById('hist');
   function drawHist() {
-    hist.innerHTML = ''; const W = hist.clientWidth || 900, Hh = 170, L = 34, R = 8, T = 10, B = 22;
-    const pts = HIST.down || []; if (!pts.length) { const t = el('text', { x: W / 2, y: Hh / 2, 'text-anchor': 'middle', class: 'sub' }, hist); t.textContent = '正在积累历史数据…'; return; }
-    const max = Math.max(1, ...pts.map(p => p[1]), ...(HIST.up || []).map(p => p[1]));
-    const x = i => L + i / Math.max(1, pts.length - 1) * (W - L - R), y = v => T + (1 - v / max) * (Hh - T - B);
-    const g = el('g', { class: 'grid' }, hist); [0, .25, .5, .75, 1].forEach(f => { el('line', { x1: L, x2: W - R, y1: y(max * f), y2: y(max * f) }, g); });
+    hist.innerHTML = '';
+    // 坐标要用 viewBox 的用户坐标系。原来用 hist.clientWidth 算 x, 而 SVG 上写着
+    // viewBox="0 0 1200 170" + preserveAspectRatio="none", 两者不等时整条曲线会被横向压缩。
+    const vb = (hist.getAttribute('viewBox') || '0 0 1200 170').split(/\s+/).map(Number);
+    const W = vb[2] || 1200, Hh = vb[3] || 170, L = 34, R = 8, T = 10, B = 22;
+    const pts = HIST.down || [];
+    if (!pts.length) {
+      const t0 = el('text', { x: W / 2, y: Hh / 2, 'text-anchor': 'middle', class: 'sub' }, hist);
+      t0.textContent = t('暂无 24 小时数据'); return;
+    }
+    const ups = HIST.up || [];
+    const max = Math.max(1, ...pts.map(p => p[1]), ...ups.map(p => p[1]));
+    const x = i => L + i / Math.max(1, pts.length - 1) * (W - L - R);
+    const y = v => T + (1 - v / max) * (Hh - T - B);
+    const g = el('g', { class: 'grid' }, hist);
+    [0, .25, .5, .75, 1].forEach(f => el('line', { x1: L, x2: W - R, y1: y(max * f), y2: y(max * f) }, g));
     const ax = el('g', { class: 'axis' }, hist);
-    [0, .5, 1].forEach(f => { const t = el('text', { x: 4, y: y(max * f) + 3 }, ax); t.textContent = (max * f).toFixed(0); });
-    pts.filter((_, i) => i % Math.ceil(pts.length / 6) === 0).forEach((p, k, arr) => { const i = pts.indexOf(p); const t = el('text', { x: x(i), y: Hh - 6, 'text-anchor': 'middle' }, ax); t.textContent = new Date(p[0] * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }); });
-    const line = (arr, color) => { if (!arr || !arr.length) return; const d = arr.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p[1])}`).join(' '); el('path', { d, class: 'ln', stroke: color }, hist); };
-    line(HIST.down, COLOR.wan); line(HIST.up, COLOR.proxy);
+    [0, .5, 1].forEach(f => { const t1 = el('text', { x: 4, y: y(max * f) + 3 }, ax); t1.textContent = (max * f).toFixed(0); });
+    const step = Math.ceil(pts.length / 6);
+    pts.forEach((p, i) => {
+      if (i % step) return;
+      const t2 = el('text', { x: x(i), y: Hh - 6, 'text-anchor': 'middle' }, ax);
+      t2.textContent = new Date(p[0] * 1000).toTimeString().slice(0, 5);
+    });
+    const line = (arr, color) => {
+      if (!arr || !arr.length) return;
+      const d = arr.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p[1])}`).join(' ');
+      el('path', { d, fill: 'none', stroke: color, 'stroke-width': 1.6 }, hist);
+    };
+    line(pts, COLOR.wan); line(ups, COLOR.proxy);
+
+    // ---- 悬浮读数: 十字准线 + 两条曲线上的点 + 提示框 ----
+    const cross = el('line', { y1: T, y2: Hh - B, stroke: 'var(--text-muted)', 'stroke-width': 1,
+                              'stroke-dasharray': '3 3', opacity: 0 }, hist);
+    const dotD = el('circle', { r: 3, fill: COLOR.wan, opacity: 0 }, hist);
+    const dotU = el('circle', { r: 3, fill: COLOR.proxy, opacity: 0 }, hist);
+    const hit = el('rect', { x: L, y: T, width: Math.max(0, W - L - R), height: Math.max(0, Hh - T - B),
+                            fill: 'transparent' }, hist);
+    const show = (on, i, ev) => {
+      [cross, dotD, dotU].forEach(e => e.setAttribute('opacity', on ? 1 : 0));
+      if (!on) return hideTip();
+      const px = x(i);
+      cross.setAttribute('x1', px); cross.setAttribute('x2', px);
+      dotD.setAttribute('cx', px); dotD.setAttribute('cy', y(pts[i][1]));
+      const u = ups[i];
+      if (u) { dotU.setAttribute('cx', px); dotU.setAttribute('cy', y(u[1])); }
+      else dotU.setAttribute('opacity', 0);
+      const ts = new Date(pts[i][0] * 1000);
+      showTip(ev, `<div class="tt">${ts.toLocaleString()}</div>`
+        + `<b>↓ ${fmt(pts[i][1])}</b> / <b>↑ ${fmt(u ? u[1] : 0)}</b> Mbps`
+        + `<br><span class="d">${t('5 分钟均值')}</span>`);
+    };
+    hit.addEventListener('mousemove', ev => {
+      // 用 SVG 自己的坐标反算, 别用像素 —— 元素宽度和 viewBox 宽度不是一回事
+      const r = hist.getBoundingClientRect();
+      const ux = (ev.clientX - r.left) / r.width * W;
+      const i = Math.max(0, Math.min(pts.length - 1,
+        Math.round((ux - L) / Math.max(1, W - L - R) * (pts.length - 1))));
+      show(true, i, ev);
+    });
+    hit.addEventListener('mouseleave', () => show(false));
   }
 
   // ---------- 设备去向 (NetFlow 实时) ----------
@@ -415,10 +466,20 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     const W = vb[2] || 560, Hh = vb[3] || 260, pad = 14, MINH = 8, narrow = innerWidth < 640, lab = narrow ? 70 : 132, L = lab, R = Math.max(lab + 60, W - lab - 6), cut = narrow ? 9 : 17;
     const srcs = f.sources, dsts = f.dests.filter(d => f.links.some(l => l.dst === d.id));
     const sTot = srcs.reduce((a, x) => a + x.v, 0) || 1, dTot = dsts.reduce((a, x) => a + x.v, 0) || 1;
-    const sScale = (Hh - pad * 2 - MINH * srcs.length) / sTot, dScale = (Hh - pad * 2 - MINH * dsts.length) / dTot;
-    let y = pad; const sp = {}; srcs.forEach(x => { const h = MINH + x.v * sScale; sp[x.id] = { y, h, off: 0 }; y += h + 4; });
+    // 节点之间还有 GAP 的间隔, 分配高度时必须扣掉 —— 原来没扣, 5 个节点起总高就
+    // 超出 viewBox(8 个溢出 14px), 上下被切掉。节点很多时 MINH 也要让步,
+    // 否则 avail 变负数, 条形高度算出来是负的。
+    const GAP = 4;
+    const fit = (n, tot) => {
+      const minh = Math.max(2, Math.min(MINH, (Hh - pad * 2 - GAP * Math.max(0, n - 1)) / Math.max(1, n)));
+      const avail = Hh - pad * 2 - minh * n - GAP * Math.max(0, n - 1);
+      return { minh, scale: Math.max(0, avail) / tot };
+    };
+    const sf = fit(srcs.length, sTot), df = fit(dsts.length, dTot);
+    const sScale = sf.scale, dScale = df.scale;
+    let y = pad; const sp = {}; srcs.forEach(x => { const h = sf.minh + x.v * sScale; sp[x.id] = { y, h, off: 0 }; y += h + GAP; });
     y = pad; const dp = {}; const palette = [COLOR.wan, COLOR.proxy, COLOR.wg, COLOR.branch, COLOR.ts, COLOR.ovpn];
-    dsts.forEach((x, i) => { const h = MINH + x.v * dScale; dp[x.id] = { y, h, off: 0, c: palette[i % palette.length] }; y += h + 4; });
+    dsts.forEach((x, i) => { const h = df.minh + x.v * dScale; dp[x.id] = { y, h, off: 0, c: palette[i % palette.length] }; y += h + GAP; });
     f.links.forEach(l => {
       const a = sp[l.src], b = dp[l.dst]; if (!a || !b) return;
       const ha = Math.max(1, l.v * sScale), hb = Math.max(1, l.v * dScale);

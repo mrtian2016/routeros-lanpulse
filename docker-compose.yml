@@ -93,7 +93,8 @@ services:
     profiles: [netflow, all]
     ports: ["${BIND_ADDR:-0.0.0.0}:2055:2055/udp"]
     environment:
-      LAN_CIDR: ${LAN_CIDR:-192.168.1.0/24}
+      LAN: ${LAN_CIDR:-192.168.1.0/24}
+      MGMT_HOSTS: ${MGMT_HOSTS:-}
 
   # ── UniFi (bundled, API-key based) ───────────────────────────────────────
   unifi-exporter:

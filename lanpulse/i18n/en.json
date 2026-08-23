@@ -90,7 +90,9 @@
     "数据源": "Sources",
     "采集 Prometheus，本页每秒刷新（WAN / 每设备速率直连路由器取 1 秒粒度，其余走 Prometheus）。": "Scraped by Prometheus; this page refreshes every second (WAN and per-device rates are read straight from the router at 1-second resolution).",
     "服务端": "server",
-    "当前无拨入会话": "no active dial-in sessions"
+    "当前无拨入会话": "no active dial-in sessions",
+    "暂无 24 小时数据": "no 24 h data yet",
+    "5 分钟均值": "5-minute average"
   },
   "events": [
     [
