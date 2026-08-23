@@ -347,11 +347,21 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   function renderOvpn() {
     const f = F(), ss = (f && f.ovpn_sessions) || [];
     const hint = document.getElementById('ov-hint');
-    if (hint) hint.textContent = `服务端 60957 · ${ss.length} 个会话 · 一对端一账号`;
-    const rate = ip => { const k = Object.keys((f && f.ifaces) || {}); return null; };
-    document.querySelector('#ov-table tbody').innerHTML = ss.length ? ss.map(x => {
-      return `<tr title="${H(x.note || '')}"><td>${H(x.user)}</td><td class="d">${H(x.caller)}</td><td>${H(x.ip)}</td><td>${H(x.uptime)}</td><td class="d">${H(x.enc || '')}</td></tr>`;
-    }).join('') : '<tr><td colspan="5" class="d">当前无拨入会话</td></tr>';
+    const port = S.ovpn_port ? ' :' + S.ovpn_port : '';    // 端口来自 ROS, 不写死
+    if (hint) hint.textContent = `{服务端}${port} · ${ss.length} 个会话 · 一对端一账号`.replace('{服务端}', t('服务端'));
+    // 速率按用户名对到 <ovpn-用户名> 这个 ROS 动态接口上。
+    // 这一列以前渲染的是加密方式(表头却写着 ↓/↑ Mbps) —— 速率根本没接。
+    const rateOf = user => {
+      const d = ((f && f.ifaces) || {})[`<ovpn-${user}>`];
+      if (d) return `${fmt(d.down)} / ${fmt(d.up)}`;
+      const o = (S.ovpn || []).find(x => x.id === user);
+      return o ? `${fmt(o.down)} / ${fmt(o.up)}` : '—';
+    };
+    document.querySelector('#ov-table tbody').innerHTML = ss.length
+      ? ss.map(x => `<tr title="${H([x.note, x.enc].filter(Boolean).join(' · '))}">
+          <td>${H(x.user)}</td><td class="d">${H(x.caller)}</td><td>${H(x.ip)}</td>
+          <td>${H(x.uptime)}</td><td class="num">${rateOf(x.user)}</td></tr>`).join('')
+      : `<tr><td colspan="5" class="d">${t('当前无拨入会话')}</td></tr>`;
   }
 
   function renderTailnet() {

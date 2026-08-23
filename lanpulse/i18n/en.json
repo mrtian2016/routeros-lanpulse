@@ -88,7 +88,9 @@
     "实时": "live",
     "累计自路由器启动": "accumulated since router boot",
     "数据源": "Sources",
-    "采集 Prometheus，本页每秒刷新（WAN / 每设备速率直连路由器取 1 秒粒度，其余走 Prometheus）。": "Scraped by Prometheus; this page refreshes every second (WAN and per-device rates are read straight from the router at 1-second resolution)."
+    "采集 Prometheus，本页每秒刷新（WAN / 每设备速率直连路由器取 1 秒粒度，其余走 Prometheus）。": "Scraped by Prometheus; this page refreshes every second (WAN and per-device rates are read straight from the router at 1-second resolution).",
+    "服务端": "server",
+    "当前无拨入会话": "no active dial-in sessions"
   },
   "events": [
     [

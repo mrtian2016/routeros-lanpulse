@@ -513,6 +513,7 @@ def ev(kind, text, level="info", t=None, value=None):
 _prev = {}
 _ewma = {}
 _wgp = {"ts": 0.0, "v": []}   # WireGuard 监听端口缓存
+_ovp = {"ts": 0.0, "v": ""}   # OpenVPN 服务端端口缓存
 _stab = {}
 
 def stable(key, value, n=2):
@@ -702,6 +703,15 @@ def collect():
     st["ingress"] = {"trojan": grp(("trojan", "anytls")), "https": grp(("http",)), "wg": wg_mbps}
     st["ingress_detail"] = ing_rows
     st["ingress_wg_dir"] = {"rx": wg_rx, "tx": wg_tx}
+    # OpenVPN 服务端端口: 前端提示里原来写死成 60957, 改成向 ROS 实时读 (端口极少变, 缓存 1 小时)
+    if time.time() - _ovp["ts"] > 3600:
+        try:
+            _ovp["v"] = next((str(x.get("port")) for x in ros("/interface/ovpn-server/server", "port,enabled")
+                              if x.get("port")), "")
+            _ovp["ts"] = time.time()
+        except Exception:
+            pass
+    st["ovpn_port"] = _ovp["v"]
     st["ros_uptime"] = int(one(f'mktxp_system_uptime{{routerboard_name="{RBN}"}}'))
     st["health"] = health()
     # 前端画的三条入口线, 标签/端口/连接数全部来自运行时采集
