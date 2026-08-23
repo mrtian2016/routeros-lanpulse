@@ -2,10 +2,12 @@
 
 # lanpulse
 
-**A real-time traffic map for home and small networks**
+**A live dashboard for MikroTik RouterOS**
 
 One page that answers: who is using the bandwidth, where traffic enters and leaves,
 whether the tunnels are up, and how hot the machines are running.
+
+`RouterOS` · `Prometheus` · `no build step` · `zh / en` · `light / dark`
 
 [中文](README.zh-CN.md) · [Configuration](docs/CONFIG.md)
 
@@ -23,6 +25,30 @@ whether the tunnels are up, and how hot the machines are running.
 > the built-in **redaction mode** — see [Redaction](#redaction).
 
 ---
+
+## Before you clone: this is a RouterOS dashboard
+
+**A MikroTik router is not one data source among many — it is the foundation.**
+Eight of the fifteen panels come from it, including everything that makes the page
+worth looking at:
+
+| Needs RouterOS | Optional add-ons |
+|---|---|
+| WAN throughput + 24 h history | Proxmox VE guests / storage |
+| The flow diagram itself | Chassis temperature & fans (IPMI) |
+| Per-device LAN traffic *(via `kid-control`)* | NAS capacity & disk health (SNMP) |
+| WireGuard peers | Wi-Fi client signal & rates (UniFi) |
+| OpenVPN dial-in users | Per-device destinations (NetFlow) |
+| Device names *(from DHCP leases)* | Tunnel / ingress accounting (textfile) |
+| Half the event stream *(router log)* | |
+| Public IP | |
+
+Two things in particular do not port to other platforms: per-device traffic relies on
+RouterOS **`kid-control`**, which has no equivalent on OPNsense or OpenWrt, and the
+1-second resolution comes from a persistent connection to the RouterOS **binary API**.
+
+If you do not run MikroTik, this project will show you an empty page. That is not a bug —
+it is what it is built on.
 
 ## Why
 
@@ -94,7 +120,9 @@ passwords from one IP locks it out for five minutes.
 
 ## Requirements
 
-**Required**: Prometheus (included in the compose file) and a RouterOS router.
+**Required**: a MikroTik router running RouterOS, [mktxp](https://github.com/akpw/mktxp)
+to scrape it, and Prometheus (included in the compose file). RouterOS 7.x is what this is
+developed against; 6.x exposes most of the same metrics but is untested.
 
 **Optional** — turn off what you do not have and the matching panels hide themselves:
 Proxmox VE (`prometheus-pve-exporter`), IPMI/BMC (`ipmi-exporter`),

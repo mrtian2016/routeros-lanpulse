@@ -2,9 +2,11 @@
 
 # lanpulse
 
-**家庭 / 小型网络的实时流向面板**
+**MikroTik RouterOS 的实时流量面板**
 
 一张图看清：谁在用带宽、流量从哪进来往哪去、隧道通不通、机器热不热。
+
+`RouterOS` · `Prometheus` · `零构建` · `中/英` · `亮/暗`
 
 [English](README.md) · [配置说明](docs/CONFIG.md)
 
@@ -21,6 +23,27 @@
 > 截图里的设备名、IP、站点名都是**脱敏模式**生成的假名 —— 这是内置功能，见 [脱敏](#脱敏)。
 
 ---
+
+## 先说清楚：这是一个 RouterOS 面板
+
+**MikroTik 路由器不是众多数据源之一，它是地基。** 十五个面板里有八个来自它，
+而且正是让这一页值得看的那八个：
+
+| 必须有 RouterOS | 可选附加 |
+|---|---|
+| WAN 上下行 + 24 小时曲线 | Proxmox VE 虚拟机 / 存储池 |
+| 流向图本身 | 机箱温度与风扇（IPMI） |
+| 内网每设备流量（靠 `kid-control`） | NAS 容量与硬盘健康（SNMP） |
+| WireGuard peers | 无线客户端信号与速率（UniFi） |
+| OpenVPN 拨入用户 | 设备去向桑基图（NetFlow） |
+| 设备名（来自 DHCP 租约） | 隧道 / 入口流量统计（textfile） |
+| 一半的实时事件（路由器日志） | |
+| 公网 IP | |
+
+有两处特别不好移植：内网每设备流量依赖 RouterOS 的 **`kid-control`**，
+OPNsense / OpenWrt 上没有对等功能；1 秒粒度来自与 RouterOS **二进制 API** 的长连接。
+
+**不用 MikroTik 的话，这个项目打开就是一张空页面。** 这不是缺陷，它就建在这上面。
 
 ## 它解决什么问题
 
@@ -83,8 +106,9 @@ python3 -m http.server -d docs/demo 8000   # 本地预览
 
 ## 需要什么
 
-**必需**：Prometheus（compose 里自带）+ 一台 RouterOS 路由器（指标来自
-[mktxp](https://github.com/akpw/mktxp)）。
+**必需**：一台跑 RouterOS 的 MikroTik 路由器、用来采集它的
+[mktxp](https://github.com/akpw/mktxp)、以及 Prometheus（compose 里自带）。
+开发是基于 RouterOS 7.x 的；6.x 大部分指标应该也有，但没测过。
 
 **可选**（缺哪个就关哪个，面板会自动隐藏对应区块）：
 
@@ -233,7 +257,8 @@ MIT
 
 - [x] 告警外发（Bark / Telegram）
 - [ ] 更多告警渠道（ntfy / 企业微信 / Webhook）
-- [ ] 更多路由器后端（OPNsense / OpenWrt）
+- [ ] 其它路由器平台 —— 老实说工作量不小：`kid-control` 在别处没有对等物，
+      每设备流量得换一套完全不同的机制（conntrack 计费或每主机队列）
 
 - [x] 配置化（地址 / 名字 / 拓扑 / 阈值全部进 `config.toml`）
 - [x] 模块开关与自动隐藏
