@@ -9,7 +9,7 @@ whether the tunnels are up, and how hot the machines are running.
 
 `RouterOS` · `Prometheus` · `no build step` · `zh / en` · `light / dark`
 
-[**Live demo**](https://mrtian2016.github.io/routeros-lanpulse/) · [中文](README.zh-CN.md) · [Configuration](docs/CONFIG.md)
+[**Live demo**](https://mrtian2016.github.io/routeros-lanpulse/) · [中文](README.zh-CN.md) · [**RouterOS setup**](docs/SETUP.md) · [Configuration](docs/CONFIG.md)
 
 </div>
 
@@ -66,6 +66,10 @@ event stream, and a few tables that matter.
   standard library only. `docker compose up` and you are done.
 
 ## Quick start
+
+**Do [the router-side setup](docs/SETUP.md) first** — a read-only user, the API service and
+a `kid-control` profile. It takes five minutes and skipping it is the number one reason the
+dashboard comes up empty.
 
 ```bash
 git clone https://github.com/mrtian2016/routeros-lanpulse.git && cd routeros-lanpulse

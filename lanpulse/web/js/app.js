@@ -170,6 +170,28 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   // ---------- 事件流 ----------
   const feed = document.getElementById('feed');
   let lastEvKey = '';
+  // 数据源自检。只列没通过的项 —— 全绿时这块完全不出现, 不占地方。
+  const REPO = 'https://github.com/mrtian2016/routeros-lanpulse/blob/main/';
+  let healthCollapsed = localStorage.getItem('lanpulse.health.collapsed') === '1';
+  function renderHealth() {
+    const box = document.getElementById('health');
+    if (!box) return;
+    const bad = (S.health || []).filter(h => !h.ok);
+    box.classList.toggle('hide', bad.length === 0);
+    if (!bad.length) return;
+    const list = healthCollapsed ? '' : `<ul>${bad.map(h => `<li>
+        <span class="lbl">${H(h.label)}</span>
+        <span class="hint">${H(h.hint)}${h.doc ? ` · <a href="${REPO}${H(h.doc)}" target="_blank" rel="noreferrer">查看文档</a>` : ''}</span>
+      </li>`).join('')}</ul>`;
+    box.innerHTML = `<h3>⚠ ${bad.length} 项数据源没通
+        <button id="health-toggle">${healthCollapsed ? '展开' : '收起'}</button></h3>${list}`;
+    document.getElementById('health-toggle').onclick = () => {
+      healthCollapsed = !healthCollapsed;
+      localStorage.setItem('lanpulse.health.collapsed', healthCollapsed ? '1' : '0');
+      renderHealth();
+    };
+  }
+
   function renderFeed() {
     const evs = S.events || [];
     const key = evs.map(e => e.t + e.text).join('|');
@@ -419,7 +441,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     document.getElementById('t-remote-d').textContent = `WG ${wgPeers.filter(p => p.online).length} · OpenVPN ${ovpnUsers.length} · tailnet ${tn.online || 0}/${tn.nodes || 0}`;
     EDGES.forEach(e => { const r = e.rateFn(); e.last = r; e.rate = r; e.p.setAttribute('stroke-width', r <= 0.01 ? 1 : (1.2 + Math.log10(1 + r) * 2.2).toFixed(2)); e.p.classList.toggle('idle', r <= 0.01); });
     [...wgPeers, ...ovpnUsers, ...branches].forEach(p => { if (p.dot) p.dot.setAttribute('opacity', p.online === false ? .25 : 1); });
-    for (const [n, f] of [['tables', renderTables], ['feed', renderFeed], ['hw', renderHW], ['nas', renderNAS], ['wifi', renderWifi], ['ovpn', renderOvpn], ['tailnet', renderTailnet], ['sankey', renderSankey]]) {
+    for (const [n, f] of [['health', renderHealth], ['tables', renderTables], ['feed', renderFeed], ['hw', renderHW], ['nas', renderNAS], ['wifi', renderWifi], ['ovpn', renderOvpn], ['tailnet', renderTailnet], ['sankey', renderSankey]]) {
       try { f(); } catch (err) { console.error('render ' + n + ' failed:', err); }
     }
     document.getElementById('clock').textContent = clock();

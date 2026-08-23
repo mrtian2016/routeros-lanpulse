@@ -47,24 +47,27 @@ instance = "192.168.1.10:9100"         # 宿主机的 node_exporter
 memory_total_gb = 32               # 用于"VM 已用内存"进度条的分母
 
 # ── 硬件面板 (0..n 台) ──────────────────────────────────────────────────────
-# 每有一台带 IPMI/BMC 的机器就加一段 [[hardware]]。一台都没有就全删掉。
-[[hardware]]
-key = "host-a"                       # 内部标识, 任意但要唯一
-title = "Proxmox 宿主机"
-hint = "BMC 192.168.1.20"
-bmc = "host-a"                    # ipmi-exporter 配置里的 target 名 (bmc 标签)
-instance = "192.168.1.10:9100"         # 同一台机器的 node_exporter
-storage = "pve"                    # pve = 显示 PVE 存储池 | fs = 显示本机文件系统 | none
-nvme = true                        # 显示 NVMe 温度/寿命 (需要 nvme textfile 采集)
+# 每有一台带 IPMI/BMC 的机器就加一段 [[hardware]]。**默认全部注释掉** ——
+# 一台都没有时不该看到空面板; 有的话把对应几行取消注释再改。
+#
+# [[hardware]]
+# key = "host-a"                     # 内部标识, 任意但要唯一
+# title = "Proxmox 宿主机"
+# hint = "BMC 192.168.1.20"
+# bmc = "host-a"                     # ipmi-exporter 配置里的 target 名 (bmc 标签)
+# instance = "192.168.1.10:9100"     # 同一台机器的 node_exporter
+# storage = "pve"                    # pve = 显示 PVE 存储池 | fs = 显示本机文件系统 | none
+# nvme = true                        # 显示 NVMe 温度/寿命 (需要 nvme textfile 采集)
+#
+# [[hardware]]
+# key = "host-b"
+# title = "应用服务器"
+# hint = "BMC 192.168.1.21"
+# bmc = "host-b"
+# instance = "192.168.1.15:9100"
+# storage = "fs"
+# nvme = false
 
-[[hardware]]
-key = "host-b"
-title = "应用服务器"
-hint = "BMC 192.168.1.21"
-bmc = "host-b"
-instance = "192.168.1.15:9100"
-storage = "fs"
-nvme = false
 
 # ── 群晖 NAS (可选, SNMP) ───────────────────────────────────────────────────
 [nas]

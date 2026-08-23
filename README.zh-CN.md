@@ -8,7 +8,7 @@
 
 `RouterOS` · `Prometheus` · `零构建` · `中/英` · `亮/暗`
 
-[**在线演示**](https://mrtian2016.github.io/routeros-lanpulse/) · [English](README.md) · [配置说明](docs/CONFIG.md)
+[**在线演示**](https://mrtian2016.github.io/routeros-lanpulse/) · [English](README.md) · [**路由器侧配置**](docs/SETUP.zh-CN.md) · [配置说明](docs/CONFIG.md)
 
 </div>
 
@@ -56,6 +56,9 @@ lanpulse 把这些收进一页：一张会流动的拓扑图 + 一条实时事�
 - **零构建**：前端是原生 ES 模块，后端只用 Python 标准库，`docker compose up` 就跑起来
 
 ## 快速开始
+
+**先做[路由器侧配置](docs/SETUP.zh-CN.md)** —— 只读账号、API 服务、`kid-control` profile。
+五分钟的事，跳过它是面板打开一片空白的头号原因。
 
 ```bash
 git clone https://github.com/mrtian2016/routeros-lanpulse.git && cd routeros-lanpulse

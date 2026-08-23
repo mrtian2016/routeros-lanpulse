@@ -703,6 +703,7 @@ def collect():
     st["ingress_detail"] = ing_rows
     st["ingress_wg_dir"] = {"rx": wg_rx, "tx": wg_tx}
     st["ros_uptime"] = int(one(f'mktxp_system_uptime{{routerboard_name="{RBN}"}}'))
+    st["health"] = health()
     # 前端画的三条入口线, 标签/端口/连接数全部来自运行时采集
     # id 就是画在图上的标签, 必须短 (节点框只有 120px, 长了会溢出压到圆点上);
     # 完整端口清单放 ports, 前端在悬浮提示里展示。
@@ -1195,6 +1196,79 @@ def toml_set_bools(text, section, updates):
         for k, v in updates.items():
             out.append(f"{k} = {bl(v)}\n")
     return "".join(out)
+
+
+# ================= 首屏自检 =================
+# 数据源不通时, 面板只会是一片 0 —— 用户无法判断是自己配错了还是项目坏了。
+# 这里逐项检查并给出"缺什么、怎么补", 直接显示在页面上。
+_health = {"ts": 0.0, "items": []}
+HEALTH_INTERVAL = 30.0
+
+
+def health():
+    """每 30 秒算一次: 这些查询不便宜, 而且配置问题不会秒级变化。"""
+    if time.time() - _health["ts"] < HEALTH_INTERVAL and _health["items"]:
+        return _health["items"]
+    out = []
+
+    def add(ok, label, hint="", doc=""):
+        out.append({"ok": bool(ok), "label": label, "hint": hint, "doc": doc})
+
+    # 1. Prometheus 本身
+    ups = q("up")
+    add(bool(ups), "Prometheus 可达",
+        "面板拿不到任何指标。检查 config.toml 的 [prometheus] url —— 用 compose 部署时应为 http://prometheus:9090")
+    if not ups:
+        _health.update(ts=time.time(), items=out)
+        return out                      # Prometheus 都不通, 后面的检查没有意义
+
+    # 2. RouterOS 指标 (mktxp)
+    ros_metrics = bool(q(f'mktxp_interface_running{{routerboard_name="{RBN}"}}'))
+    add(ros_metrics, f"RouterOS 指标 (mktxp, routerboard_name={RBN})",
+        "mktxp 没有产出数据。三个常见原因: ①compose 里 mktxp 的配置要挂到 /etc/mktxp; "
+        f"②mktxp.conf 的段名必须是 [{RBN}], 和 config.toml 的 router.name 一致; "
+        "③路由器上没开 API 服务或账号密码不对 —— 看 docker compose logs mktxp",
+        "docs/SETUP.md#2-the-api-service-required")
+
+    # 3. WAN 接口名是否对得上
+    if ros_metrics:
+        add(bool(q(f'mktxp_interface_running{{name="{WANIF}"}}')),
+            f"WAN 接口 {WANIF}",
+            f"路由器上没有叫 {WANIF} 的接口。拨号线路通常是 pppoe-out1, "
+            "静态 IP / DHCP 则填物理口名(如 ether1)。改 config.toml 的 router.wan_interface")
+
+    # 4. 1 秒快车道 (直连二进制 API)
+    fast_ok = bool((_fast or {}).get("ready"))
+    add(fast_ok or not RT.get("fast_lane", True), "1 秒快车道 (RouterOS API 8728)",
+        "连不上路由器的二进制 API, 面板会退化成 Prometheus 的抓取粒度(一顿一顿的)。"
+        "检查 router.host / .env 的 ROS_PASS / 路由器上 /ip service 的 api 是否启用并放行了本机",
+        "docs/SETUP.md#2-the-api-service-required")
+
+    # 5. kid-control —— 内网每设备流量的唯一来源
+    if ros_metrics:
+        kc = len(q("mktxp_kid_control_device_bytes_down_total"))
+        add(kc > 0, f"kid-control 设备 ({kc})",
+            "没有 kid-control 数据, '内网设备流量'表会是空的。这是 RouterOS 的功能, "
+            "需要在路由器上建一个 kid-control profile(用全天范围, 否则会拦设备)",
+            "docs/SETUP.md#3-kid-control--required-for-per-device-traffic")
+
+    # 6. 可选模块: 开了但没数据的才提示
+    opt = [("edge", ED.get("enabled"), f'up{{instance="{ED["instance"]}"}}',
+            "边缘主机的 node_exporter 没数据。入口/分支隧道/tailnet 这三块会是空的",
+            "exporters/textfile/README.md"),
+           ("pve", PV.get("enabled"), "pve_up", "pve-exporter 没数据。用 --profile pve 启动并填好 .env 里的 PVE token", ""),
+           ("nas", CFG["nas"].get("enabled"), "synology_system_temperature_celsius",
+            "群晖 SNMP 没数据。用 --profile snmp 启动, 并在 exporters/snmp/snmp.yml 填好凭据", ""),
+           ("unifi", CFG["unifi"].get("enabled"), "unifi_client_signal_dbm",
+            "UniFi 没数据。用 --profile unifi 启动并在 .env 填 UNIFI_URL / UNIFI_API_KEY", ""),
+           ("ipmi", bool(CFG["hardware"]), 'ipmi_temperature_celsius',
+            "ipmi-exporter 没数据。用 --profile ipmi 启动, 并在 exporters/ipmi/ipmi.yml 填 BMC 账号", "")]
+    for name, on, probe, hint, doc in opt:
+        if on:
+            add(bool(q(probe)), f"可选模块: {name}", hint, doc)
+
+    _health.update(ts=time.time(), items=out)
+    return out
 
 
 # ================= 告警外发 (Bark / Telegram) =================
