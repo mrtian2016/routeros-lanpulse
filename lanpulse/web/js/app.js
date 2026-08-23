@@ -309,6 +309,29 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     });
   }
 
+  // 虚拟机列表。**单独成函数** —— 它原先和硬件面板挤在同一个 renderHW 里,
+  // 改成按配置生成硬件面板时整块被替换, 这张表就悄悄没了(线上切换后才发现)。
+  function renderVMs() {
+    const tb = document.querySelector('#vm-table tbody');
+    if (!tb) return;
+    const vms = S.vms || [];
+    tb.innerHTML = vms.length ? vms.map(v => `<tr class="${v.on ? '' : 'off'}">
+        <td>${H(v.id)} ${H(v.name)}</td>
+        <td><span class="dot" style="background:${v.on ? 'var(--good)' : 'var(--text-dim)'}"></span>${v.on ? '运行' : '停机'}</td>
+        <td class="num">${v.on ? v.cpu + '%' : '—'}</td>
+        <td>${v.on ? v.mem + ' / ' + v.memmax + ' G' : '—'}</td>
+        <td class="num d">—</td></tr>`).join('')
+      : '<tr><td colspan="5" class="d">等待 pve-exporter 数据…</td></tr>';
+    const on = vms.filter(v => v.on);
+    const used = on.reduce((a, v) => a + (v.mem || 0), 0);
+    const total = CFG.pve_mem_total || 32;     // 分母来自配置, 不写死
+    const kv = document.getElementById('pve-kv');
+    if (kv) kv.innerHTML = [
+      kvRow(t('VM 已用内存'), `${used.toFixed(1)} / ${total} G`, used / total * 100, 'var(--s-wan)'),
+      kvRow(t('运行中 VM'), `${on.length} / ${vms.length}`, vms.length ? on.length / vms.length * 100 : 0, 'var(--good)'),
+    ].join('');
+  }
+
   function renderNAS() {
     const n = S.nas || {}, disks = n.disks || [];
     const bad = (n.raid || []).filter(r => !r.ok).length;
@@ -441,7 +464,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     document.getElementById('t-remote-d').textContent = `WG ${wgPeers.filter(p => p.online).length} · OpenVPN ${ovpnUsers.length} · tailnet ${tn.online || 0}/${tn.nodes || 0}`;
     EDGES.forEach(e => { const r = e.rateFn(); e.last = r; e.rate = r; e.p.setAttribute('stroke-width', r <= 0.01 ? 1 : (1.2 + Math.log10(1 + r) * 2.2).toFixed(2)); e.p.classList.toggle('idle', r <= 0.01); });
     [...wgPeers, ...ovpnUsers, ...branches].forEach(p => { if (p.dot) p.dot.setAttribute('opacity', p.online === false ? .25 : 1); });
-    for (const [n, f] of [['health', renderHealth], ['tables', renderTables], ['feed', renderFeed], ['hw', renderHW], ['nas', renderNAS], ['wifi', renderWifi], ['ovpn', renderOvpn], ['tailnet', renderTailnet], ['sankey', renderSankey]]) {
+    for (const [n, f] of [['health', renderHealth], ['tables', renderTables], ['feed', renderFeed], ['vms', renderVMs], ['hw', renderHW], ['nas', renderNAS], ['wifi', renderWifi], ['ovpn', renderOvpn], ['tailnet', renderTailnet], ['sankey', renderSankey]]) {
       try { f(); } catch (err) { console.error('render ' + n + ' failed:', err); }
     }
     document.getElementById('clock').textContent = clock();
