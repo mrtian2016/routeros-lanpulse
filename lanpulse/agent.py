@@ -4,7 +4,7 @@ GET /api/state.json  -> 全量状态
 GET /            -> 前端页面 (index.html)
 env: PROM(http://prometheus:9090), LISTEN_PORT(9132), INTERVAL(2)
 """
-import base64, hmac, json, os, re, secrets, shutil, socket, threading, time, urllib.parse, urllib.request
+import base64, hmac, ipaddress, json, os, re, secrets, shutil, socket, threading, time, urllib.parse, urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -881,12 +881,36 @@ def collect():
         "model": next((m.get("model", "") for m, _ in q("synology_system_info")), ""),
     }
     # ---- IP -> 设备名 (DHCP 租约 + 配置静态映射), 旁路由与 NetFlow 共用 ----
-    ip_names = {}
+    ip_names, mac_names = {}, {}
     for m, _ in q("mktxp_dhcp_lease_info"):
         _ip = m.get("address") or m.get("ip_address")
-        if _ip:
-            ip_names[_ip] = m.get("host_name") or m.get("comment") or _ip
+        _nm = m.get("host_name") or m.get("comment")
+        if _ip and _nm:
+            ip_names[_ip] = _nm
+        if m.get("mac_address") and _nm:
+            mac_names[m["mac_address"].upper()] = _nm
     ip_names.update(HOST_IP)
+    mac_names.update(HOST_MAC)
+
+    def dev_name(sip):
+        """IP -> 设备名。IPv6 的 SLAAC 地址按 EUI-64 反推 MAC 再查
+        (隐私地址反推不了, 原样返回)。"""
+        if sip in ip_names:
+            return ip_names[sip]
+        if ":" in sip:
+            try:
+                b = ipaddress.IPv6Address(sip).packed[8:]
+                if b[3] == 0xFF and b[4] == 0xFE:
+                    mac = ":".join("%02X" % x for x in
+                                   (b[0] ^ 0x02, b[1], b[2], b[5], b[6], b[7]))
+                    if mac in mac_names:
+                        return mac_names[mac]
+            except Exception:
+                pass
+            # 隐私地址反推不了 MAC —— 截短显示, 别让整条 v6 撑爆悬浮框
+            if len(sip) > 24:
+                return sip[:10] + "…" + sip[-9:]
+        return sip
 
     # ---- 旁路由 (mihomo 控制器): 实时分流 ----
     byp = CFG["bypass"]
@@ -910,12 +934,16 @@ def collect():
                 e[0] += 1
                 e[1] += (c.get("download") or 0) + (c.get("upload") or 0)
             # 每来源速率: 对该来源全部连接的累计字节做增量; 连接关闭时和会回退, rate() 对负增量返 0
-            srcs = []
+            merged = {}
             for sip, (ncon, tot) in per_src.items():
-                r_s = rate("byp_src_" + sip, tot, now_b)
-                srcs.append({"name": ip_names.get(sip, sip), "conns": ncon,
-                             "rate": round(max(0.0, r_s), 2)})
-            srcs.sort(key=lambda x: (-x["rate"], -x["conns"]))
+                r_s = max(0.0, rate("byp_src_" + sip, tot, now_b))
+                nm_ = dev_name(sip)
+                e = merged.setdefault(nm_, {"name": nm_, "conns": 0, "rate": 0.0})
+                e["conns"] += ncon
+                e["rate"] += r_s
+            srcs = sorted(merged.values(), key=lambda x: (-x["rate"], -x["conns"]))
+            for x in srcs:
+                x["rate"] = round(x["rate"], 2)
             st["bypass"] = {
                 "sources": srcs[:5],
                 "down": round(rate("byp_dl", cj.get("downloadTotal", 0), now_b), 3),
