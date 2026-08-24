@@ -1138,6 +1138,8 @@ _HOSTS = ["书房台式", "客厅电视", "主卧手机", "次卧平板", "阳�
           "阳台洗衣机", "书房打印机", "客卧手机", "健身房音箱", "地下室主机"]
 _SITES = ["站点甲", "站点乙", "站点丙", "站点丁", "站点戊", "站点己"]
 _USERS = ["用户 A", "用户 B", "用户 C", "用户 D", "用户 E", "用户 F"]
+# 机场节点名会暴露用的是哪家机场, 必须换 —— 事件文本里的 [节点名] 靠第二遍扫文本跟着换
+_NODES = ["节点甲", "节点乙", "节点丙", "节点丁", "节点戊", "节点己"]
 
 
 def _h(v, n):
@@ -1203,16 +1205,16 @@ def _mask_str(v):
 
 # 哪些区块里的"名字"要换, 以及换成哪种风格的假名
 _SSIDS = ["HomeWiFi", "HomeWiFi-5G", "Guest-WiFi", "IoT-WiFi"]
-_NAME_POOLS = {"lan": _HOSTS, "top": _HOSTS, "dev": _HOSTS, "wg": _USERS,
+_NAME_POOLS = {"lan": _HOSTS, "top": _HOSTS, "dev": _HOSTS, "wg": _USERS, "sources": _HOSTS,
                "ovpn": _USERS, "tailnet": _USERS, "branches": _SITES,
                # 无线客户端也是设备; AP/电台名字里常带型号和位置
                "wifi": _HOSTS, "wifi_all": _HOSTS, "ap": _HOSTS, "radios": _HOSTS}
 # 按**字段名**指定假名池, 优先级高于所在区块。SSID 常常直接带着户主姓名。
-_KEY_NAME_POOLS = {"ssid": _SSIDS}
+_KEY_NAME_POOLS = {"ssid": _SSIDS, "node": _NODES}
 # 这些字典的**键本身**就是设备名 (fast.dev 是 {设备名: {...}}), 键也得换,
 # 否则脱敏完设备名还明晃晃挂在那儿。
 _KEY_POOLS = {"dev": _HOSTS}
-_NAME_KEYS = ("name", "id", "user", "peer", "host_name", "src", "dst", "ssid")
+_NAME_KEYS = ("name", "id", "user", "peer", "host_name", "src", "dst", "ssid", "node")
 
 
 def _redact(node, pool=None, key_pool=None):
