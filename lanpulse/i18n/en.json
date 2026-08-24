@@ -177,7 +177,10 @@
     "内网 → 旁路由 · fake-ip 分流": "LAN → bypass · fake-ip split tunnel",
     "{n} 条连接 · 代理 {p} · 直连 {d}": "{n} connections · {p} proxied · {d} direct",
     "mihomo API 不可达": "mihomo API unreachable",
-    "{n} 条": "{n} conns"
+    "{n} 条": "{n} conns",
+    "走代理的终端": "Clients via proxy",
+    "{n} 条连接走代理": "{n} proxied connections",
+    "旁路由自身": "bypass itself"
   },
   "events": [
     [

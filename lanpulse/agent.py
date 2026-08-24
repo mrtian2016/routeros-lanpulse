@@ -930,20 +930,30 @@ def collect():
                 grp = (c.get("chains") or ["?"])[-1]
                 outs[grp] = outs.get(grp, 0) + 1
                 sip = (c.get("metadata") or {}).get("sourceIP") or "?"
-                e = per_src.setdefault(sip, [0, 0])
+                e = per_src.setdefault(sip, [0, 0, 0])
                 e[0] += 1
-                e[1] += (c.get("download") or 0) + (c.get("upload") or 0)
+                e[1] += c.get("download") or 0
+                e[2] += c.get("upload") or 0
             # 每来源速率: 对该来源全部连接的累计字节做增量; 连接关闭时和会回退, rate() 对负增量返 0
             merged = {}
-            for sip, (ncon, tot) in per_src.items():
-                r_s = max(0.0, rate("byp_src_" + sip, tot, now_b))
-                nm_ = dev_name(sip)
-                e = merged.setdefault(nm_, {"name": nm_, "conns": 0, "rate": 0.0})
+            for sip, (ncon, dl, ul) in per_src.items():
+                if sip in ("?", ""):          # 无源地址的内部连接, 不归因
+                    continue
+                if sip in ("127.0.0.1", "::1"):
+                    sip_name_override = "旁路由自身"   # mihomo/MSF 自己的出网(更新规则集等)
+                else:
+                    sip_name_override = None
+                rd = max(0.0, rate("byp_srcd_" + sip, dl, now_b))
+                ru = max(0.0, rate("byp_srcu_" + sip, ul, now_b))
+                nm_ = sip_name_override or dev_name(sip)
+                e = merged.setdefault(nm_, {"name": nm_, "conns": 0, "down": 0.0, "up": 0.0})
                 e["conns"] += ncon
-                e["rate"] += r_s
-            srcs = sorted(merged.values(), key=lambda x: (-x["rate"], -x["conns"]))
+                e["down"] += rd
+                e["up"] += ru
+            srcs = sorted(merged.values(), key=lambda x: (-(x["down"] + x["up"]), -x["conns"]))
             for x in srcs:
-                x["rate"] = round(x["rate"], 2)
+                x["down"], x["up"] = round(x["down"], 2), round(x["up"], 2)
+                x["rate"] = round(x["down"] + x["up"], 2)
             st["bypass"] = {
                 "sources": srcs[:5],
                 "down": round(rate("byp_dl", cj.get("downloadTotal", 0), now_b), 3),
