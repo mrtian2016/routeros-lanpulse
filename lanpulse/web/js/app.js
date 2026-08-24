@@ -763,7 +763,10 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       t('内网 DHCP · {n} 台设备', { n: (S.lan && S.lan.clients) || 0 });
     const tn = S.tailnet || {};
     document.getElementById('t-remote-d').textContent = `WG ${wgPeers.filter(p => p.online).length} · OpenVPN ${ovpnUsers.length} · tailnet ${tn.online || 0}/${tn.nodes || 0}`;
-    EDGES.forEach(e => { const r = e.rateFn(); e.last = r; e.rate = r; e.p.setAttribute('stroke-width', r <= 0.01 ? 1 : (1.2 + Math.log10(1 + r) * 2.2).toFixed(2)); e.p.classList.toggle('idle', r <= 0.01); });
+    EDGES.forEach(e => { const r = e.rateFn(); e.last = r; e.rate = r;
+      // 幂函数比对数陡: 1 Mbps≈3px, 10≈5.6, 100≈12(封顶13) —— 谁在跑大流量一眼可见
+      e.p.setAttribute('stroke-width', r <= 0.01 ? 1 : Math.min(13, 1.4 + Math.pow(r, 0.42) * 1.6).toFixed(2));
+      e.p.classList.toggle('idle', r <= 0.01); });
     [...wgPeers, ...ovpnUsers, ...branches].forEach(p => { if (p.dot) p.dot.setAttribute('opacity', p.online === false ? .25 : 1); });
     for (const [n, f] of [['health', renderHealth], ['tables', renderTables], ['feed', renderFeed], ['vms', renderVMs], ['hw', renderHW], ['nas', renderNAS], ['wifi', renderWifi], ['ovpn', renderOvpn], ['tailnet', renderTailnet], ['sankey', renderSankey]]) {
       try { f(); } catch (err) { console.error('render ' + n + ' failed:', err); }
