@@ -118,7 +118,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     EDGES.push(e); return e;
   };
   const CURVE = (a, b, bend = .5) => { const mx = a.x + (b.x - a.x) * bend; return `M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}`; };
-  const s_ = (n, k) => side(NODES[n], k);
+  const s_ = (n, k) => { const node = NODES[n]; return node ? side(node, k) : {x: 0, y: 0}; };
   let internetSubEl = null;
   // "2d14h58m2s" -> "2天14小时58分" (不到秒)
   const zhDur = raw => {
