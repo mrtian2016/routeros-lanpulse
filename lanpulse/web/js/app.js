@@ -229,7 +229,20 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     g.addEventListener('mouseleave', hideTip);
     return g;
   };
-  Object.values(NODES).forEach(n => { if (!n.group) drawNode(n); });
+  Object.entries(NODES).forEach(([k, n]) => {
+    if (n.group) return;
+    const g = drawNode(n);
+    if (k === 'ros') {
+      // 路由器节点悬停: 连接跟踪实况 (分流流量走 raw notrack, 不在此数)
+      g.addEventListener('mousemove', ev2 => {
+        const rc = S.ros_conns || {};
+        showTip(ev2, `<div class="tt">${H(n.name)}</div>`
+          + `<b>${rc.total || 0}</b> ${t('条连接跟踪')} (v4 ${rc.v4 || 0} · v6 ${rc.v6 || 0})`
+          + `<br><span class="d">${t('不含旁路由分流 (raw notrack)')}</span>`);
+      });
+      g.addEventListener('mouseleave', hideTip);
+    }
+  });
   // 组标签贴着该组第一个节点的上沿, 而不是取组节点自己的 y。两者对不上时标签会被
   // 节点盖住 —— "分支站点" 以前就只露出一个 "分" 字。顺带: 空组不再画孤零零的标签。
   const groupTag = (g, boxes, text, color) => {
@@ -754,7 +767,9 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     });
     const ingConns = (S.ingress_detail || []).reduce((a, r) => a + (+r.conns || 0), 0);
     const ingMbps = val(S.ingress, 'trojan') + val(S.ingress, 'https') + val(S.ingress, 'wg');
-    document.getElementById('t-ingress').innerHTML = `${ingConns}<small>活跃连接</small>`;
+    const rc = S.ros_conns || {};
+    document.getElementById('t-ingress').innerHTML =
+      `${ingConns}<small>${t('活跃')}${rc.total ? ' / ' + rc.total + ' ' + t('总连接') : ''}</small>`;
     document.getElementById('t-ingress-d').textContent =
       `${fmt(ingMbps)} Mbps · ` + ((S.ingress_meta || []).map(m => m.id).join(' / ') || 'trojan / anytls / HTTPS');
     const t24 = (S.radios || []).reduce((a, r) => a + (+r.clients || 0), 0);

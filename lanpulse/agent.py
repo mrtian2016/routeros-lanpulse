@@ -882,6 +882,13 @@ def collect():
         "raid": [{"name": m.get("raid", "?"), "ok": v == 1} for m, v in q("synology_raid_status")],
         "model": next((m.get("model", "") for m, _ in q("synology_system_info")), ""),
     }
+    # ---- ROS 连接跟踪 (raw notrack 的分流流量不计入, 那部分在 mihomo 侧) ----
+    st["ros_conns"] = {
+        "total": int(one(f'mktxp_ip_connections_total{{routerboard_name="{RBN}"}}') or 0),
+        "v4": int(one(f'mktxp_ipv4_connections_total{{routerboard_name="{RBN}"}}') or 0),
+        "v6": int(one(f'mktxp_ipv6_connections_total{{routerboard_name="{RBN}"}}') or 0),
+    }
+
     # ---- IP -> 设备名 (DHCP 租约 + 配置静态映射), 旁路由与 NetFlow 共用 ----
     ip_names, mac_names = {}, {}
     for m, _ in q("mktxp_dhcp_lease_info"):
@@ -1100,6 +1107,9 @@ def collect():
             step_change("ingn:" + r_["svc"], r_["conns"], nm + " 连接数", "ingress", step=5, unit=" 条")
             burst("ingb:" + r_["svc"], r_["mbps"], nm, "ingress", floor=EVC["ingress_burst_floor_mbps"], mult=3.0,
                   down=r_.get("rx"), up=r_.get("tx"))
+        rc = st.get("ros_conns") or {}
+        if rc.get("total"):
+            step_change("rosconn", rc["total"], "ROS 连接跟踪", "lan", step=300, unit=" 条")
         # 旁路由: 哪台设备正在经代理传输 (带出口节点)
         for s_ in ((st.get("bypass") or {}).get("sources") or []):
             label = s_["name"] + " 经代理" + (f"[{s_['node']}]" if s_.get("node") else "")

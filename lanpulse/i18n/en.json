@@ -188,7 +188,10 @@
     "近 5 分钟累计 · 设备 → 公网地址": "last 5 min totals · device → remote address",
     "目的地址": "Destination",
     "端口": "Port",
-    "流量": "Volume"
+    "流量": "Volume",
+    "总连接": "tracked",
+    "条连接跟踪": "tracked connections",
+    "不含旁路由分流 (raw notrack)": "excludes split-tunnel traffic (raw notrack)"
   },
   "events": [
     [
@@ -486,6 +489,10 @@
     [
       "经代理",
       "via proxy"
+    ],
+    [
+      "ROS 连接跟踪",
+      "ROS connection tracking"
     ]
   ]
 }
