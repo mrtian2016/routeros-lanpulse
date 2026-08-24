@@ -43,7 +43,7 @@ def _load_cfg():
         print(f"[config] 未找到 {path}, 使用默认值 (面板会是空的)", flush=True)
     merge = lambda k, dflt: {**dflt, **(raw.get(k) or {})}
     return {
-        "site": merge("site", {"title": "网络流量面板", "note": "", "timezone": "Asia/Shanghai"}),
+        "site": merge("site", {"title": "routeros-lanpulse", "note": "", "timezone": "Asia/Shanghai"}),
         "prometheus": merge("prometheus", {"url": "http://prometheus:9090", "rate_window": "1m"}),
         "router": merge("router", {"enabled": True, "label": "RouterOS", "name": "ROS", "host": "",
                                    "port": 8728, "user": "mon", "wan_interface": "", "lan_interface": "",
@@ -63,7 +63,7 @@ def _load_cfg():
                                    "kinds": {k: d for k, d, _ in EVENT_KINDS}, "cooldown_sec": 300, "startup_quiet_sec": 60,
                                    "max_per_hour": 20, "min_burst_mbps": 0,
                                    "bark": {"enabled": False, "server": "https://api.day.app",
-                                            "group": "lanpulse", "sound": "", "icon": ""},
+                                            "group": "routeros-lanpulse", "sound": "", "icon": ""},
                                    "telegram": {"enabled": False, "api_base": "https://api.telegram.org"}}),
         "hosts": raw.get("hosts") or {},
         "hardware": raw.get("hardware") or [],
@@ -1374,7 +1374,7 @@ class Notifier:
                 time.sleep(1)
                 continue
             lang = CFG["alerts"].get("lang", "zh")
-            title = CFG["site"].get("title", "lanpulse")
+            title = CFG["site"].get("title", "routeros-lanpulse")
             body = t_event(evt.get("text", ""), lang)
             for fn in (self._bark, self._telegram):
                 try:
@@ -1397,7 +1397,7 @@ class Notifier:
         if not c.get("enabled") or not key:
             return
         payload = {"title": title, "body": body,
-                   "group": c.get("group") or "lanpulse",
+                   "group": c.get("group") or "routeros-lanpulse",
                    # Bark 的 level 决定是否响铃/进摘要; bad 走时效性通知, info 静默
                    "level": {"bad": "timeSensitive", "warn": "active"}.get(level, "passive")}
         if c.get("sound"):
@@ -1425,8 +1425,8 @@ class Notifier:
 
     def test(self):
         out = {}
-        title = CFG["site"].get("title", "lanpulse")
-        body = t_event("lanpulse 告警测试 —— 看到这条说明通道是通的", CFG["alerts"].get("lang", "zh"))
+        title = CFG["site"].get("title", "routeros-lanpulse")
+        body = t_event("routeros-lanpulse 告警测试 —— 看到这条说明通道是通的", CFG["alerts"].get("lang", "zh"))
         for name, fn in (("bark", self._bark), ("telegram", self._telegram)):
             c = (CFG["alerts"].get(name) or {})
             if not c.get("enabled"):

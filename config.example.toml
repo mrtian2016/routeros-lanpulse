@@ -12,7 +12,7 @@
 # ============================================================================
 
 [site]
-title = "lanpulse"                 # Page heading. Anything you like.
+title = "routeros-lanpulse"        # Page heading. Anything you like.
 # Small text next to the live indicator. Empty falls back to the built-in label.
 note = ""
 # Only affects how event timestamps are displayed.
@@ -199,7 +199,7 @@ burst = false                      # Traffic bursts (usually interesting, not ac
 [alerts.bark]
 enabled = false
 server = "https://api.day.app"     # Point at your own server if you self-host
-group = "lanpulse"
+group = "routeros-lanpulse"
 sound = ""                         # Empty = default
 icon = ""
 

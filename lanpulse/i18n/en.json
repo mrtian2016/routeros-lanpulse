@@ -117,7 +117,6 @@
     "最近 {n} 分钟均值": "Average over the last {n} min",
     "pve-exporter · 内存按配置值": "pve-exporter · memory from config",
     "°C 系统温度": "°C system temp",
-    "lanpulse · 设置": "lanpulse · Settings",
     "← 返回面板": "← Back to dashboard",
     "退出登录": "Sign out",
     "设置页已关闭": "Settings disabled",
@@ -139,7 +138,6 @@
     "已保存": "Saved",
     "保存失败": "Save failed",
     "需要后端": "Backend required",
-    "这是静态演示站，没有运行中的 lanpulse 后端，所以设置页不可用。<br>部署之后（<code>docker compose up -d</code>）这里就是配置编辑器和告警开关。": "This is a static demo with no lanpulse backend running, so the settings page is unavailable.<br>Once deployed (<code>docker compose up -d</code>), this is where the config editor and alert switches live.",
     "硬件: 温度越线 / 风扇停转 / 磁盘写满 / RAID 异常": "Hardware: temperature thresholds / stopped fans / full disks / RAID faults",
     "分支隧道中断与恢复": "Branch tunnels going down and coming back",
     "WAN 拨号上下线": "WAN link up and down",
@@ -172,7 +170,9 @@
     "内网互访": "LAN-to-LAN",
     "公网入站": "Inbound from Internet",
     "HTTPS 入口": "HTTPS ingress",
-    "HTTPS/QUIC": "HTTPS/QUIC"
+    "HTTPS/QUIC": "HTTPS/QUIC",
+    "routeros-lanpulse · 设置": "routeros-lanpulse · Settings",
+    "这是静态演示站，没有运行中的 routeros-lanpulse 后端，所以设置页不可用。<br>部署之后（<code>docker compose up -d</code>）这里就是配置编辑器和告警开关。": "This is a static demo with no routeros-lanpulse backend running, so the settings page is unavailable.<br>Once deployed (<code>docker compose up -d</code>), this is where the config editor and alert switches live."
   },
   "events": [
     [
@@ -454,6 +454,10 @@
     [
       "ipmi-exporter 没数据。用 --profile ipmi 启动, 并在 exporters/ipmi/ipmi.yml 填 BMC 账号",
       "No ipmi-exporter data. Start with --profile ipmi and set the BMC account in exporters/ipmi/ipmi.yml"
+    ],
+    [
+      "告警测试 —— 看到这条说明通道是通的",
+      "alert test — if you can read this, the channel works"
     ]
   ]
 }

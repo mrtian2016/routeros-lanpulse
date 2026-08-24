@@ -685,8 +685,8 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       if (el2 && P[key] === false) el2.style.display = 'none';
     }
     const site = CFG.site || {};
-    document.title = site.title || 'lanpulse';
-    setText('site-title', site.title || 'lanpulse');
+    document.title = site.title || 'routeros-lanpulse';
+    setText('site-title', site.title || 'routeros-lanpulse');
     if (site.note) document.getElementById('live').textContent = '● ' + site.note;
     setText('nas-title', (CFG.nas && CFG.nas.title) || 'NAS');
     setText('nas-hint', (CFG.nas && CFG.nas.hint) || '');
