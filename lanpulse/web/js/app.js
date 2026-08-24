@@ -542,8 +542,9 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     // 直接按 id 写, 不再用 closest() 摸索父容器 —— 这样"哪个元素由谁填充"是可审计的
     const ap = (S.ap || [])[0];
     if (ap) {
-      setText('wifi-title', `${t('无线接入')} · ${ap.model}`);
-      setText('wifi-hint', `${ap.ip} · fw ${ap.fw}`);
+      // 标题用设备名(AC Pro), 不用型号(U7PG2) —— 名字是用户在 UniFi 里起的, 更有意义
+      setText('wifi-title', `${t('无线接入')} · ${ap.name || ap.model}`);
+      setText('wifi-hint', `${ap.model ? ap.model + ' · ' : ''}${ap.ip} · fw ${ap.fw}`);
     }
     const w = S.wifi || [], r24 = (S.radios || []).find(x => x.band === '2.4G') || {}, r5 = (S.radios || []).find(x => x.band === '5G') || {};
     const uw = document.querySelector('#wifi-table').closest('.panel').querySelector('.util');
