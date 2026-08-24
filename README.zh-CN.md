@@ -8,19 +8,14 @@
 
 `RouterOS` · `Prometheus` · `零构建` · `中/英` · `亮/暗`
 
-[**在线演示**](https://mrtian2016.github.io/routeros-lanpulse/) · [English](README.md) · [**路由器侧配置**](docs/SETUP.zh-CN.md) · [配置说明](docs/CONFIG.zh-CN.md)
+[English](README.md) · [**路由器侧配置**](docs/SETUP.zh-CN.md) · [配置说明](docs/CONFIG.zh-CN.md)
+
+### [→ 打开在线演示](https://mrtian2016.github.io/routeros-lanpulse/)
+
+就是这个页面本身，跑在一份真实网络的脱敏快照上。两套主题、中英双语、每块面板都在，
+不用装任何东西。上面的设备名、IP、站点名都是**脱敏模式**生成的假名（见 [脱敏](#脱敏)）。
 
 </div>
-
-![暗色主题](docs/screenshots/dashboard-dark.png)
-
-<details>
-<summary>亮色主题</summary>
-
-![亮色主题](docs/screenshots/dashboard-light.png)
-</details>
-
-> 截图里的设备名、IP、站点名都是**脱敏模式**生成的假名 —— 这是内置功能，见 [脱敏](#脱敏)。
 
 ---
 
@@ -85,10 +80,11 @@ docker compose --profile router up -d  # 只跑面板 + Prometheus + RouterOS �
 | `unifi` | UniFi 无线客户端信号 / 速率 |
 | `all` | 全部 |
 
-## 先看看效果
+## 演示站是怎么来的，以及自己托管一份
 
-**[在线演示](https://mrtian2016.github.io/routeros-lanpulse/)** —— `docs/demo/` 是一份**脱敏快照**做的静态演示站，纯 HTML，
-扔到 GitHub Pages 或任意静态托管就能跑，不需要后端也不需要 Prometheus。
+上面那个[在线演示](https://mrtian2016.github.io/routeros-lanpulse/)就是 `docs/demo/` 本身：
+一份**脱敏快照**生成的纯 HTML，背后既没有后端也没有 Prometheus。
+扔到 GitHub Pages 或任意静态托管就能跑，也可以在本地起。
 
 ```bash
 python3 -m http.server -d docs/demo 8000   # 本地预览
@@ -214,8 +210,6 @@ burst = false      # 流量突发
 默认值按「是否需要你动手」定：要处理的默认开，信息性的默认关。
 设置页有对应的开关，改哪边都一样 —— 后台改配置时**注释会原样保留**
 （标准库没有 TOML 写入器，整段重新序列化会把注释全丢掉，所以这里是按行改的）。
-
-![告警设置](docs/screenshots/settings-alerts.png)
 
 > 配置里没列到的类型默认**推送**。升级带来新事件类型时，宁可吵一下，也别静默吞掉。
 

@@ -9,20 +9,16 @@ whether the tunnels are up, and how hot the machines are running.
 
 `RouterOS` · `Prometheus` · `no build step` · `zh / en` · `light / dark`
 
-[**Live demo**](https://mrtian2016.github.io/routeros-lanpulse/) · [中文](README.zh-CN.md) · [**RouterOS setup**](docs/SETUP.md) · [Configuration](docs/CONFIG.md)
+[中文](README.zh-CN.md) · [**RouterOS setup**](docs/SETUP.md) · [Configuration](docs/CONFIG.md)
+
+### [→ Open the live demo](https://mrtian2016.github.io/routeros-lanpulse/)
+
+The real page, running on a redacted snapshot of a real network. Both themes, both
+languages, every panel — nothing to install. Every device name, IP and site name you
+see there is a pseudonym produced by the built-in **redaction mode**
+(see [Redaction](#redaction)).
 
 </div>
-
-![dark theme](docs/screenshots/dashboard-dark.png)
-
-<details>
-<summary>Light theme</summary>
-
-![light theme](docs/screenshots/dashboard-light.png)
-</details>
-
-> Every device name, IP and site name in these screenshots is a pseudonym produced by
-> the built-in **redaction mode** — see [Redaction](#redaction).
 
 ---
 
@@ -96,10 +92,11 @@ Profiles select which exporters run — start only what you actually have:
 | `unifi` | UniFi wireless client signal / rates |
 | `all` | everything |
 
-## Try it without installing
+## The demo, and hosting your own
 
-**[Try the live demo](https://mrtian2016.github.io/routeros-lanpulse/)** — `docs/demo/` is a static demo built from a **redacted snapshot** — plain HTML, no backend
-and no Prometheus needed. Drop it on GitHub Pages or any static host.
+The [live demo](https://mrtian2016.github.io/routeros-lanpulse/) is nothing but `docs/demo/`:
+plain HTML built from a **redacted snapshot**, with no backend and no Prometheus behind it.
+Drop it on GitHub Pages or any static host, or run it locally.
 
 ```bash
 python3 -m http.server -d docs/demo 8000
@@ -230,8 +227,6 @@ Defaults follow one rule: *does this need you to do something?* Actionable types
 to on, informational ones to off. The settings page has the same switches, and writing
 from there **preserves your comments** — the standard library has no TOML writer, and
 re-serialising the whole file would drop every comment, so the write is line-based.
-
-![alert settings](docs/screenshots/settings-alerts.png)
 
 > Types absent from the config default to **on**. When an upgrade adds a new event type,
 > being briefly noisy beats silently swallowing it.
