@@ -453,7 +453,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
         <td><span class="dot" style="background:${v.on ? 'var(--good)' : 'var(--text-dim)'}"></span>${v.on ? '运行' : '停机'}</td>
         <td class="num">${v.on ? v.cpu + '%' : '—'}</td>
         <td>${v.on ? v.mem + ' / ' + v.memmax + ' G' : '—'}</td>
-        <td class="num d">—</td></tr>`).join('')
+        <td class="d">${H(v.ip || '')}</td></tr>`).join('')
       : '<tr><td colspan="5" class="d">等待 pve-exporter 数据…</td></tr>';
     const on = vms.filter(v => v.on);
     const used = on.reduce((a, v) => a + (v.mem || 0), 0);
