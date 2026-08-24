@@ -475,6 +475,10 @@
     [
       "连不上 mihomo 控制器 (bypass.api), 流向图上的分流节点会显示为断线",
       "Cannot reach the mihomo controller (bypass.api); the split-tunnel node on the flow map will show as down"
+    ],
+    [
+      "经代理",
+      "via proxy"
     ]
   ]
 }

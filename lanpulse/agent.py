@@ -57,7 +57,7 @@ def _load_cfg():
         "bypass": merge("bypass", {"enabled": False, "api": "", "secret": "", "label": "旁路由"}),
         "redact": merge("redact", {"enabled": False, "keep_subnet": True, "mask_hardware": False}),
         "events": merge("events", {"buffer": 200, "wan_burst_floor_mbps": 8, "device_burst_floor_mbps": 5,
-                                   "ingress_burst_floor_mbps": 1, "ovpn_burst_floor_mbps": 3,
+                                   "ingress_burst_floor_mbps": 1, "ovpn_burst_floor_mbps": 3, "bypass_burst_floor_mbps": 3,
                                    "burst_multiplier": 4, "burst_cooldown_sec": 60,
                                    "disk_warn_pct": 85, "burst_level": "warn",
                                    "threshold_level": "warn"}),
@@ -930,13 +930,15 @@ def collect():
                 grp = (c.get("chains") or ["?"])[-1]
                 outs[grp] = outs.get(grp, 0) + 1
                 sip = (c.get("metadata") or {}).get("sourceIP") or "?"
-                e = per_src.setdefault(sip, [0, 0, 0])
+                e = per_src.setdefault(sip, [0, 0, 0, {}])
                 e[0] += 1
                 e[1] += c.get("download") or 0
                 e[2] += c.get("upload") or 0
+                node0 = (c.get("chains") or ["?"])[0]
+                e[3][node0] = e[3].get(node0, 0) + (c.get("download") or 0) + (c.get("upload") or 0) + 1
             # 每来源速率: 对该来源全部连接的累计字节做增量; 连接关闭时和会回退, rate() 对负增量返 0
             merged = {}
-            for sip, (ncon, dl, ul) in per_src.items():
+            for sip, (ncon, dl, ul, nodes) in per_src.items():
                 if sip in ("?", ""):          # 无源地址的内部连接, 不归因
                     continue
                 if sip in ("127.0.0.1", "::1"):
@@ -946,14 +948,18 @@ def collect():
                 rd = max(0.0, rate("byp_srcd_" + sip, dl, now_b))
                 ru = max(0.0, rate("byp_srcu_" + sip, ul, now_b))
                 nm_ = sip_name_override or dev_name(sip)
-                e = merged.setdefault(nm_, {"name": nm_, "conns": 0, "down": 0.0, "up": 0.0})
+                e = merged.setdefault(nm_, {"name": nm_, "conns": 0, "down": 0.0, "up": 0.0, "_nodes": {}})
                 e["conns"] += ncon
                 e["down"] += rd
                 e["up"] += ru
+                for n0, w in nodes.items():
+                    e["_nodes"][n0] = e["_nodes"].get(n0, 0) + w
             srcs = sorted(merged.values(), key=lambda x: (-(x["down"] + x["up"]), -x["conns"]))
             for x in srcs:
                 x["down"], x["up"] = round(x["down"], 2), round(x["up"], 2)
                 x["rate"] = round(x["down"] + x["up"], 2)
+                nd = x.pop("_nodes", {})
+                x["node"] = max(nd, key=nd.get) if nd else ""    # 该设备的主导出口节点
             st["bypass"] = {
                 "sources": srcs[:5],
                 "down": round(rate("byp_dl", cj.get("downloadTotal", 0), now_b), 3),
@@ -1071,6 +1077,11 @@ def collect():
             step_change("ingn:" + r_["svc"], r_["conns"], nm + " 连接数", "ingress", step=5, unit=" 条")
             burst("ingb:" + r_["svc"], r_["mbps"], nm, "ingress", floor=EVC["ingress_burst_floor_mbps"], mult=3.0,
                   down=r_.get("rx"), up=r_.get("tx"))
+        # 旁路由: 哪台设备正在经代理传输 (带出口节点)
+        for s_ in ((st.get("bypass") or {}).get("sources") or []):
+            label = s_["name"] + " 经代理" + (f"[{s_['node']}]" if s_.get("node") else "")
+            burst("bypc:" + s_["name"], s_["down"] + s_["up"], label, "burst",
+                  floor=EVC["bypass_burst_floor_mbps"], down=s_["down"], up=s_["up"])
         wgd = st.get("ingress_wg_dir") or {}
         burst("ing:wg", (st.get("ingress") or {}).get("wg", 0), "WireGuard 入口", "ingress",
               floor=EVC["ingress_burst_floor_mbps"], mult=3.0, down=wgd.get("rx"), up=wgd.get("tx"))

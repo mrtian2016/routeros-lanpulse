@@ -162,7 +162,8 @@ device_burst_floor_mbps = 5        # LAN device burst threshold
 ingress_burst_floor_mbps = 1       # Ingress / tunnel burst threshold
 burst_multiplier = 4               # How many times the recent average counts as a burst
 burst_cooldown_sec = 60            # Do not re-report the same subject within this
-ovpn_burst_floor_mbps = 3          # OpenVPN dial-in user burst threshold
+ovpn_burst_floor_mbps = 3
+bypass_burst_floor_mbps = 3         # Per-client burst through the bypass router          # OpenVPN dial-in user burst threshold
 disk_warn_pct = 85                 # Warn above this disk / storage usage
 # Event levels: info | warn | bad. The level drives the colour, and decides
 # whether [alerts].levels picks it up. Set burst_level = "info" to keep bursts

@@ -263,7 +263,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     d.rateEl = el('text', { x: n.x + n.w - 8, y: n.y + n.h / 2 + 3, class: 'sub', 'text-anchor': 'end' }, g);
     d.g = g;
     g.addEventListener('mousemove', ev => d.name && showTip(ev,
-      `<div class="tt">${H(d.name)} → ${t('旁路由')}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps<br><span class="d">${t('{n} 条连接走代理', { n: d.conns })}</span>`));
+      `<div class="tt">${H(d.name)} → ${t('旁路由')}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps<br><span class="d">${t('{n} 条连接走代理', { n: d.conns })}${d.exitNode ? ' · ' + H(d.exitNode) : ''}</span>`));
     g.addEventListener('mouseleave', hideTip);
   });
   peerNode(tsNode, COLOR.ts, t('tailnet 节点'), () => `<div class="tt">tailnet</div><span class="d">${t('{n}/{m} 在线', { n: (S.tailnet && S.tailnet.online) || 0, m: (S.tailnet && S.tailnet.nodes) || 0 })}</span>`);
@@ -693,6 +693,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       const placeholder = !src && i === 0 && bsrc.length === 0;
       d.name = src ? src.name : ''; d.down = src ? (src.down || 0) : 0;
       d.up = src ? (src.up || 0) : 0; d.conns = src ? src.conns : 0;
+      d.exitNode = src ? (src.node || '') : '';
       if (placeholder) {
         d.g.setAttribute('opacity', 0.5);
         if (d.edge) d.edge.show(true);
