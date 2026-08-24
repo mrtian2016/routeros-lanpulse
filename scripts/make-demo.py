@@ -71,13 +71,17 @@ def main():
     with open(os.path.join(OUT, "demo", "fixture.js"), "w", encoding="utf-8") as f:
         f.write(fixture)
 
-    # fixture 必须在 app.js 之前执行 (app.js 初始化时就要读 window.__CFG__)
-    idx = os.path.join(OUT, "index.html")
-    html = open(idx, encoding="utf-8").read()
-    html = html.replace('<script type="module" src="js/app.js"></script>',
-                        '<script src="demo/fixture.js"></script>\n'
-                        '<script type="module" src="js/app.js"></script>')
-    open(idx, "w", encoding="utf-8").write(html)
+    # fixture 必须在页面脚本之前执行 (app.js 初始化时就要读 window.__CFG__)。
+    # 设置页也要注入 —— 它同样靠 window.__I18N__ 翻译, 漏掉的话演示站的设置页
+    # 会永远是中文, 而且这种漏法不会报错, 只会"看起来没翻译"。
+    for page, script in (("index.html", "js/app.js"), ("settings.html", "js/settings.js")):
+        path = os.path.join(OUT, page)
+        html = open(path, encoding="utf-8").read()
+        tag = '<script type="module" src="%s"></script>' % script
+        if tag not in html:
+            sys.exit("!! %s 里找不到 %s 的 script 标签, 注入失败" % (page, script))
+        html = html.replace(tag, '<script src="demo/fixture.js"></script>\n' + tag, 1)
+        open(path, "w", encoding="utf-8").write(html)
 
     # 二道保险: 光看 redacted 标记不够 —— 万一某个字段没被脱敏池覆盖到, 标记照样是 True。
     # 这里对**即将发布的文件**再扫一遍, 有嫌疑就删掉产物, 不给"以为脱敏了"的机会。

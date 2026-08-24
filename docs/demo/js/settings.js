@@ -18,7 +18,7 @@ async function refresh() {
   } catch (e) {
     // 静态演示站没有后端, 设置页只能说明情况, 不能假装能用
     document.querySelector('.wrap').insertAdjacentHTML('beforeend',
-      `<div class="card"><h2>需要后端</h2><p class="note" data-i18n>这是静态演示站，没有运行中的 lanpulse 后端，所以设置页不可用。<br>部署之后（<code>docker compose up -d</code>）这里就是配置编辑器和告警开关。</p></div>`);
+      `<div class="card"><h2>需要后端</h2><p class="note" data-i18n>这是静态演示站，没有运行中的 routeros-lanpulse 后端，所以设置页不可用。<br>部署之后（<code>docker compose up -d</code>）这里就是配置编辑器和告警开关。</p></div>`);
     applyLang();
     return;
   }

@@ -63,7 +63,10 @@ function walkAttrs(root) {
   }
 }
 
+// 页面标题也要翻, 但**不能抢**: 面板会按 site.title 改标题, 而那是用户自己写的字,
+// 不该被翻译、更不该被这里覆盖回去。所以只在没人动过标题时才接管。
 const TITLE0 = document.title;
+const titleNow = () => (LANG === 'en' && UI[TITLE0]) ? UI[TITLE0] : TITLE0;
 
 function walk(root) {
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -91,7 +94,7 @@ function walk(root) {
 }
 
 export function applyLang() {
-  document.title = (LANG === 'en' && UI[TITLE0]) ? UI[TITLE0] : TITLE0;
+  if (document.title === TITLE0 || document.title === UI[TITLE0]) document.title = titleNow();
   walkBlocks(document.body);
   walkAttrs(document.body);
   walk(document.body);
