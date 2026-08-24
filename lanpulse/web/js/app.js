@@ -256,7 +256,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
         const w = (S.fast && S.fast.wan) || S.wan || {};
         const gb = b => b ? (b / 1073741824).toFixed(1) + ' GB' : '0 GB';
         showTip(ev2, `<div class="tt">${H(n.name)}</div>`
-          + `<b>${H(maskIp(w.ip || (S.wan && S.wan.ip)) || t('未拨号'))}</b>`
+          + `<b>${H(w.ip || (S.wan && S.wan.ip) || t('未拨号'))}</b>`
           + (w.uptime ? `<br><span class="d">${t('已连接')} ${H(zhDur(w.uptime))}</span>` : '')
           + `<br><span class="d">${t('累计')} ↓ ${gb(w.rx_total)} / ↑ ${gb(w.tx_total)}</span>`);
       });
