@@ -77,18 +77,24 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     // 组: x/y 是第一格的左上角, gap 是行距 —— 组员位置全部由此推出, 不再散落在代码里
     wgg:  { x: 30,  y: 40,  w: 96,  h: 20, gap: 26, group: true, name: 'WireGuard peers' },
     ovg:  { x: 30,  y: 430, w: 96,  h: 20, gap: 26, group: true, name: 'OpenVPN 用户' },
-    lang: { x: 950, y: 60,  w: 150, h: 20, gap: 26, group: true, name: '内网 Top 设备' },
-    ing:  { x: 950, y: 230, w: 120, h: 18, gap: 24, group: true, name: '入口 / 公网服务' },
-    brg:  { x: 950, y: 340, w: 120, h: 18, gap: 24, group: true, name: '分支站点' },
-    tsg:  { x: 950, y: 490, w: 120, h: 18, gap: 24, group: true, name: 'tailnet' },
+    lang: { x: 950, y: 40,  w: 150, h: 20, gap: 26, group: true, name: '内网 Top 设备' },
+    bypg: { x: 950, y: 205, w: 150, h: 18, gap: 24, group: true, name: '走代理的终端' },
+    ing:  { x: 950, y: 340, w: 120, h: 18, gap: 24, group: true, name: '入口 / 公网服务' },
+    brg:  { x: 950, y: 445, w: 120, h: 18, gap: 24, group: true, name: '分支站点' },
+    tsg:  { x: 950, y: 600, w: 120, h: 18, gap: 24, group: true, name: 'tailnet' },
   };
   // 组员格位。老配置里的组只有 x/y, 这里给出尺寸兜底。
-  const GDEF = { wgg: [96, 20, 26], ovg: [96, 20, 26], lang: [150, 20, 26],
+  const GDEF = { wgg: [96, 20, 26], ovg: [96, 20, 26], lang: [150, 20, 26], bypg: [150, 18, 24],
                  ing: [120, 18, 24], brg: [110, 18, 24], tsg: [110, 18, 24] };
   const slot = (g, i) => {
     const n = NODES[g] || {}, d = GDEF[g] || [110, 18, 24];
     return { x: n.x || 0, y: (n.y || 0) + i * (n.gap || d[2]), w: n.w || d[0], h: n.h || d[1] };
   };
+  // 旁路由节点: 分流的执行体。位置可由 [topology.nodes] 的 byp 指定, 没指定就放在内网正下方
+  if (CFG.panels && CFG.panels.bypass && !NODES.byp && NODES.lan) {
+    NODES.byp = { x: NODES.lan.x, y: NODES.lan.y + NODES.lan.h + 60, w: NODES.lan.w, h: 52,
+                  name: (CFG.bypass && CFG.bypass.label) || '旁路由', sub: 'MosDNS + mihomo' };
+  }
   const side = (n, s) => s === 'l' ? { x: n.x, y: n.y + n.h / 2 } : s === 'r' ? { x: n.x + n.w, y: n.y + n.h / 2 } : s === 't' ? { x: n.x + n.w / 2, y: n.y } : { x: n.x + n.w / 2, y: n.y + n.h };
   const svg = document.getElementById('map'), NS = 'http://www.w3.org/2000/svg';
   const el = (tag, attrs = {}, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
@@ -99,12 +105,16 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
 
   const EDGES = [];
   const addEdge = (id, d, color, rateFn, labelAt, tipFn) => {
-    el('path', { d, class: 'edge-bg' }, edgesLayer);
+    const bg = el('path', { d, class: 'edge-bg' }, edgesLayer);
     const p = el('path', { d, class: 'edge', stroke: color, 'stroke-width': 2, 'stroke-dasharray': '6 8' }, edgesLayer);
     const t = el('text', { x: labelAt[0], y: labelAt[1], class: 'elabel', 'text-anchor': 'middle' }, edgesLayer);
-    const e = { id, p, t, rateFn, off: 0, color };
-    p.addEventListener('mousemove', ev => showTip(ev, tipFn(e.last || 0)));
-    p.addEventListener('mouseleave', hideTip);
+    // 可见线只有 1-6px, 空闲边基本悬停不到 —— 命中区用一条 14px 的透明副本承担
+    const hit = el('path', { d, class: 'edge-hit' }, edgesLayer);
+    const e = { id, p, t, bg, hit, rateFn, off: 0, color,
+                // 空槽位的边要整体藏起来 (节点 opacity=0 时线还在会露马脚)
+                show(on) { for (const el2 of [bg, p, hit]) el2.setAttribute('visibility', on ? 'visible' : 'hidden'); } };
+    hit.addEventListener('mousemove', ev => showTip(ev, tipFn(e.last || 0)));
+    hit.addEventListener('mouseleave', hideTip);
     EDGES.push(e); return e;
   };
   const CURVE = (a, b, bend = .5) => { const mx = a.x + (b.x - a.x) * bend; return `M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}`; };
@@ -119,6 +129,21 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     r => `<div class="tt">RouterOS ↔ 内网</div><b>${fmt(r)} Mbps</b><br><span class="d">${t('{n} 台在线 (DHCP 租约)', { n: (S.lan && S.lan.clients) || 0 })}</span>`);
   addEdge('dnat', CURVE(s_('ros', 'b'), s_('edge', 'l'), .35), COLOR.proxy, () => smooth('dnat', val(S.ingress, 'trojan') + val(S.ingress, 'https')), mid(s_('ros', 'b'), s_('edge', 'l')),
     r => `<div class="tt">RouterOS → edge (dst-nat 32443/58443/3478)</div><b>${fmt(r)} Mbps</b><br><span class="d">公网入口转发</span>`);
+  if (NODES.byp) {
+    addEdge('byp', CURVE(s_('lan', 'b'), s_('byp', 't'), .5), COLOR.proxy,
+      () => smooth('byp', val(S.bypass, 'down') + val(S.bypass, 'up')),
+      mid(s_('lan', 'b'), s_('byp', 't'), 0),
+      () => {
+        const b = S.bypass || {};
+        if (b.stale) return `<div class="tt">${t('内网 → 旁路由 · fake-ip 分流')}</div><span class="d">${t('mihomo API 不可达')}</span>`;
+        let h = `<div class="tt">${t('内网 → 旁路由 · fake-ip 分流')}</div>`
+          + `<b>↓ ${fmt(b.down || 0)}</b> / <b>↑ ${fmt(b.up || 0)}</b> Mbps`
+          + `<br><span class="d">${t('{n} 条连接 · 代理 {p} · 直连 {d}', { n: b.conns || 0, p: b.proxied || 0, d: b.direct || 0 })}</span>`;
+        for (const sc of (b.sources || [])) h += `<br><span class="d">${H(sc.name)} · ${t('{n} 条', { n: sc.conns })} · ${fmt(sc.rate)} Mbps</span>`;
+        for (const g of (b.groups || [])) h += `<br><span class="d">→ ${H(g[0])} · ${g[1]}</span>`;
+        return h;
+      });
+  }
   addEdge('wifi', CURVE(s_('lan', 't'), s_('unifi', 'b'), .5), COLOR.ts, () => smooth('wifi', (S.wifi || []).reduce((a, w) => a + (w.down || 0) + (w.up || 0), 0)), mid(s_('lan', 't'), s_('unifi', 'b')),
     r => { const rs = S.radios || []; return `<div class="tt">内网 ↔ UniFi AP</div><b>${fmt(r)} Mbps</b><br><span class="d">${(S.wifi || []).length} 个无线客户端${rs.map(x => ` · ${x.band} 利用率 ${x.util}%`).join('')}</span>`; });
 
@@ -157,8 +182,25 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
                    w: 150, h: 20, gap: 26, group: true, name: '内网 Top 设备' };
   }
   const LAN_TOP = Array.from({ length: 5 }, (_, i) => ({ i, name: '', down: 0, up: 0, node: slot('lang', i) }));
+
+  // 走代理的终端: 谁正在经旁路由分流, 直接画在图上 —— 每台一条边, 粗细/流速 = 它的代理速率
+  let BYP_TOP = [];
+  if (NODES.byp) {
+    if (!NODES.bypg) {
+      NODES.bypg = { x: NODES.lang.x, y: NODES.lang.y + 5 * 26 + 35, w: 150, h: 18, gap: 24,
+                     group: true, name: '走代理的终端' };
+    }
+    BYP_TOP = Array.from({ length: 4 }, (_, i) => ({ i, name: '', down: 0, up: 0, conns: 0, node: slot('bypg', i) }));
+    BYP_TOP.forEach(d => {
+      d.edge = addEdge('bt-' + d.i, CURVE(s_('byp', 'r'), leftOf(d.node), .55), COLOR.proxy,
+        () => d.name ? smooth('bt' + d.i, d.down + d.up) : 0, [0, 0],
+        () => d.name
+          ? `<div class="tt">${H(d.name)} → ${t('旁路由')}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps<br><span class="d">${t('{n} 条连接走代理', { n: d.conns })}</span>`
+          : `<span class="d">${t('暂无数据')}</span>`);
+    });
+  }
   LAN_TOP.forEach(d => {
-    addEdge('lt-' + d.i, CURVE(s_('lan', 'r'), leftOf(d.node), .5),
+    d.edge = addEdge('lt-' + d.i, CURVE(s_('lan', 'r'), leftOf(d.node), .5),
       COLOR.wan, () => d.name ? smooth('lt' + d.i, d.down + d.up) : 0, [0, 0],
       () => d.name ? `<div class="tt">${H(d.name)}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps`
                    : `<span class="d">${t('暂无数据')}</span>`);
@@ -200,6 +242,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   groupTag('tsg', [tsNode.node], 'tailnet', COLOR.ts);
   groupTag('ing', ingLabels.map(c => c.node), '入口 / 公网服务', COLOR.proxy);
   groupTag('lang', LAN_TOP.map(d => d.node), '内网 Top 设备', COLOR.wan);
+  groupTag('bypg', BYP_TOP.map(d => d.node), '走代理的终端', COLOR.proxy);
   wgPeers.forEach(p => peerNode(p, COLOR.wg, p.id, () => `<div class="tt">${p.id}</div><span class="d">${p.ip} · ${p.online ? '在线' : '离线'}</span>`));
   ovpnUsers.forEach(u => peerNode(u, COLOR.ovpn, u.id, () => `<div class="tt">${u.id}</div><span class="d">OpenVPN 服务端用户</span>`));
   branches.forEach(b => peerNode(b, COLOR.branch, b.id + ' ' + (b.net || ''), () => `<div class="tt">${b.id}</div><span class="d">${b.net}</span>`));
@@ -211,6 +254,16 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     d.g = g;
     g.addEventListener('mousemove', ev => d.name && showTip(ev,
       `<div class="tt">${H(d.name)}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps`));
+    g.addEventListener('mouseleave', hideTip);
+  });
+  BYP_TOP.forEach(d => {
+    const g = el('g', { class: 'node small' }, nodesLayer), n = d.node;
+    el('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 4 }, g);
+    d.nameEl = el('text', { x: n.x + 8, y: n.y + n.h / 2 + 3, class: 'sub' }, g);
+    d.rateEl = el('text', { x: n.x + n.w - 8, y: n.y + n.h / 2 + 3, class: 'sub', 'text-anchor': 'end' }, g);
+    d.g = g;
+    g.addEventListener('mousemove', ev => d.name && showTip(ev,
+      `<div class="tt">${H(d.name)} → ${t('旁路由')}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps<br><span class="d">${t('{n} 条连接走代理', { n: d.conns })}${d.exitNode ? ' · ' + H(d.exitNode) : ''}</span>`));
     g.addEventListener('mouseleave', hideTip);
   });
   peerNode(tsNode, COLOR.ts, t('tailnet 节点'), () => `<div class="tt">tailnet</div><span class="d">${t('{n}/{m} 在线', { n: (S.tailnet && S.tailnet.online) || 0, m: (S.tailnet && S.tailnet.nodes) || 0 })}</span>`);
@@ -229,7 +282,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     const boxes = [...Object.values(NODES).filter(n => !n.group).map(n => ({ x: n.x, y: n.y, w: n.w, h: n.h })),
                    ...wgPeers.map(p => p.node), ...ovpnUsers.map(u => u.node),
                    ...branches.map(b => b.node), ...ingLabels.map(c => c.node),
-                   tsNode.node, ...LAN_TOP.map(d => d.node)];
+                   tsNode.node, ...LAN_TOP.map(d => d.node), ...BYP_TOP.map(d => d.node)];
     const maxX = Math.max(...boxes.map(b => b.x + b.w)), maxY = Math.max(...boxes.map(b => b.y + b.h));
     svg.setAttribute('viewBox', `0 0 ${Math.ceil(maxX + 30)} ${Math.ceil(maxY + 30)}`);
   })();
@@ -627,8 +680,31 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       const src = lanDevs[i];
       d.name = src ? src.name : ''; d.down = src ? src.down : 0; d.up = src ? src.up : 0;
       d.g.setAttribute('opacity', src ? 1 : 0);
+      if (d.edge) d.edge.show(!!src);
       if (!src) return;
       const nm = fitLabel(d.name, d.node.w - 42);   // 右侧速率列占掉一块
+      if (d.nameEl.textContent !== nm) d.nameEl.textContent = nm;
+      d.rateEl.textContent = fmt(d.down + d.up);
+    });
+    // 走代理的终端槽位。没人走代理时留一个"暂无"占位, 别让这条带凭空消失
+    const bsrc = ((S.bypass && S.bypass.sources) || []);
+    BYP_TOP.forEach((d, i) => {
+      const src = bsrc[i];
+      const placeholder = !src && i === 0 && bsrc.length === 0;
+      d.name = src ? src.name : ''; d.down = src ? (src.down || 0) : 0;
+      d.up = src ? (src.up || 0) : 0; d.conns = src ? src.conns : 0;
+      d.exitNode = src ? (src.node || '') : '';
+      if (placeholder) {
+        d.g.setAttribute('opacity', 0.5);
+        if (d.edge) d.edge.show(true);
+        if (d.nameEl.textContent !== t('暂无')) d.nameEl.textContent = t('暂无');
+        d.rateEl.textContent = '—';
+        return;
+      }
+      d.g.setAttribute('opacity', src ? 1 : 0);
+      if (d.edge) d.edge.show(!!src);
+      if (!src) return;
+      const nm = fitLabel(d.name, d.node.w - 40);
       if (d.nameEl.textContent !== nm) d.nameEl.textContent = nm;
       d.rateEl.textContent = fmt(d.down + d.up);
     });
