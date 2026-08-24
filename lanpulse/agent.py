@@ -131,6 +131,7 @@ _fast = {"ready": False}
 _prev_ctr = {}
 _dev_last = [0.0]
 _sec_cache = [0.0, {}]
+_wan_meta = [0.0, {}]
 DEV_INTERVAL = float(os.environ.get("DEV_INTERVAL", "2"))
 _names = {"ts": 0, "map": {}}
 
@@ -350,7 +351,24 @@ def fast_loop():
                 if not i: return (0.0, 0.0)
                 return (rate("rx:" + n, int(i.get("rx-byte", 0)), now),
                         rate("tx:" + n, int(i.get("tx-byte", 0)), now))
-            d, u = ifrate(WANIF); f["wan"] = {"down": round(d, 3), "up": round(u, 3)}
+            wi = ifs.get(WANIF, {})
+            f["wan"] = {"down": round(ifrate(WANIF)[0], 3), "up": round(ifrate(WANIF)[1], 3),
+                        "rx_total": int(wi.get("rx-byte", 0)), "tx_total": int(wi.get("tx-byte", 0))}
+            # 拨号元数据 (IP/时长/对端) 变化慢, 60 秒查一次 monitor, 别每秒都打扰路由器
+            try:
+                if now - _wan_meta[0] > 60:
+                    _wan_meta[0] = now
+                    # monitor 不是 /print 命令, 直接用 _api.cmd; numbers 传接口名而非索引更稳
+                    mon = _api.cmd("/interface/pppoe-client/monitor",
+                                   "=numbers=" + WANIF, "=once=") or []
+                    m0 = mon[0] if mon else {}
+                    _wan_meta[1] = {"uptime": m0.get("uptime", ""),
+                                    "ip": m0.get("local-address", ""),
+                                    "peer": m0.get("remote-address", ""),
+                                    "status": m0.get("status", "")}
+                f["wan"].update(_wan_meta[1])
+            except Exception:
+                pass
             d, u = ifrate(LANIF); f["lan"] = {"down": round(d, 3), "up": round(u, 3)}
             # 注意: ifrate() 有状态 —— rate() 每次调用都会把基线更新成本次采样。
             # 原来写成 {"down": ifrate(n)[0], "up": ifrate(n)[1]} 调了两次, 第二次 dt=0,

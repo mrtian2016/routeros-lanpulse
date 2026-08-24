@@ -191,7 +191,11 @@
     "流量": "Volume",
     "总连接": "tracked",
     "条连接跟踪": "tracked connections",
-    "不含旁路由分流 (raw notrack)": "excludes split-tunnel traffic (raw notrack)"
+    "不含旁路由分流 (raw notrack)": "excludes split-tunnel traffic (raw notrack)",
+    "未拨号": "not dialed",
+    "已连接": "up",
+    "对端": "peer",
+    "累计": "total"
   },
   "events": [
     [

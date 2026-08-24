@@ -232,6 +232,17 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   Object.entries(NODES).forEach(([k, n]) => {
     if (n.group) return;
     const g = drawNode(n);
+    if (k === 'internet') {
+      g.addEventListener('mousemove', ev2 => {
+        const w = (S.fast && S.fast.wan) || S.wan || {};
+        const gb = b => b ? (b / 1073741824).toFixed(1) + ' GB' : '0 GB';
+        showTip(ev2, `<div class="tt">${H(n.name)}</div>`
+          + `<b>${H(w.ip || (S.wan && S.wan.ip) || t('未拨号'))}</b>`
+          + (w.uptime ? `<br><span class="d">${t('已连接')} ${H(w.uptime)}${w.peer ? ' · ' + t('对端') + ' ' + H(w.peer) : ''}</span>` : '')
+          + `<br><span class="d">${t('累计')} ↓ ${gb(w.rx_total)} / ↑ ${gb(w.tx_total)}</span>`);
+      });
+      g.addEventListener('mouseleave', hideTip);
+    }
     if (k === 'ros') {
       // 路由器节点悬停: 连接跟踪实况 (分流流量走 raw notrack, 不在此数)
       g.addEventListener('mousemove', ev2 => {
