@@ -767,7 +767,9 @@ def collect():
         for m, v in q(f"rate({metric}{R})"):
             n = m.get("dhcp_name") or m.get("user") or m.get("mac_address", "?")
             if is_mac(n): n = lease_by_mac.get(n.upper(), n)
-            dev.setdefault(n, {"name": n, "ip": m.get("ip_address", ""), "down": 0, "up": 0})
+            ip_ = m.get("ip_address", "")
+            n = HOST_IP.get(ip_, n)   # hosts.by_ip 是显示名权威来源, 盖过 kid-control 里的 profile 名
+            dev.setdefault(n, {"name": n, "ip": ip_, "down": 0, "up": 0})
             dev[n][key] = round(v * 8 / 1e6, 3)
     st["lan"] = {"devices": sorted(dev.values(), key=lambda d: -(d["down"] + d["up"]))[:12],
                  "clients": int(one("mktxp_dhcp_lease_active_count"))}
