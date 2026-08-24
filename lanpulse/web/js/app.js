@@ -89,6 +89,11 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     const n = NODES[g] || {}, d = GDEF[g] || [110, 18, 24];
     return { x: n.x || 0, y: (n.y || 0) + i * (n.gap || d[2]), w: n.w || d[0], h: n.h || d[1] };
   };
+  // 旁路由节点: 分流的执行体。位置可由 [topology.nodes] 的 byp 指定, 没指定就放在内网正下方
+  if (CFG.panels && CFG.panels.bypass && !NODES.byp && NODES.lan) {
+    NODES.byp = { x: NODES.lan.x, y: NODES.lan.y + NODES.lan.h + 60, w: NODES.lan.w, h: 52,
+                  name: (CFG.bypass && CFG.bypass.label) || '旁路由', sub: 'MosDNS + mihomo' };
+  }
   const side = (n, s) => s === 'l' ? { x: n.x, y: n.y + n.h / 2 } : s === 'r' ? { x: n.x + n.w, y: n.y + n.h / 2 } : s === 't' ? { x: n.x + n.w / 2, y: n.y } : { x: n.x + n.w / 2, y: n.y + n.h };
   const svg = document.getElementById('map'), NS = 'http://www.w3.org/2000/svg';
   const el = (tag, attrs = {}, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
@@ -103,8 +108,10 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     const p = el('path', { d, class: 'edge', stroke: color, 'stroke-width': 2, 'stroke-dasharray': '6 8' }, edgesLayer);
     const t = el('text', { x: labelAt[0], y: labelAt[1], class: 'elabel', 'text-anchor': 'middle' }, edgesLayer);
     const e = { id, p, t, rateFn, off: 0, color };
-    p.addEventListener('mousemove', ev => showTip(ev, tipFn(e.last || 0)));
-    p.addEventListener('mouseleave', hideTip);
+    // 可见线只有 1-6px, 空闲边基本悬停不到 —— 命中区用一条 14px 的透明副本承担
+    const hit = el('path', { d, class: 'edge-hit' }, edgesLayer);
+    hit.addEventListener('mousemove', ev => showTip(ev, tipFn(e.last || 0)));
+    hit.addEventListener('mouseleave', hideTip);
     EDGES.push(e); return e;
   };
   const CURVE = (a, b, bend = .5) => { const mx = a.x + (b.x - a.x) * bend; return `M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}`; };
@@ -119,6 +126,20 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     r => `<div class="tt">RouterOS ↔ 内网</div><b>${fmt(r)} Mbps</b><br><span class="d">${t('{n} 台在线 (DHCP 租约)', { n: (S.lan && S.lan.clients) || 0 })}</span>`);
   addEdge('dnat', CURVE(s_('ros', 'b'), s_('edge', 'l'), .35), COLOR.proxy, () => smooth('dnat', val(S.ingress, 'trojan') + val(S.ingress, 'https')), mid(s_('ros', 'b'), s_('edge', 'l')),
     r => `<div class="tt">RouterOS → edge (dst-nat 32443/58443/3478)</div><b>${fmt(r)} Mbps</b><br><span class="d">公网入口转发</span>`);
+  if (NODES.byp) {
+    addEdge('byp', CURVE(s_('lan', 'b'), s_('byp', 't'), .5), COLOR.proxy,
+      () => smooth('byp', val(S.bypass, 'down') + val(S.bypass, 'up')),
+      mid(s_('lan', 'b'), s_('byp', 't'), 0),
+      () => {
+        const b = S.bypass || {};
+        if (b.stale) return `<div class="tt">${t('内网 → 旁路由 · fake-ip 分流')}</div><span class="d">${t('mihomo API 不可达')}</span>`;
+        let h = `<div class="tt">${t('内网 → 旁路由 · fake-ip 分流')}</div>`
+          + `<b>↓ ${fmt(b.down || 0)}</b> / <b>↑ ${fmt(b.up || 0)}</b> Mbps`
+          + `<br><span class="d">${t('{n} 条连接 · 代理 {p} · 直连 {d}', { n: b.conns || 0, p: b.proxied || 0, d: b.direct || 0 })}</span>`;
+        for (const g of (b.groups || [])) h += `<br><span class="d">${H(g[0])} · ${g[1]}</span>`;
+        return h;
+      });
+  }
   addEdge('wifi', CURVE(s_('lan', 't'), s_('unifi', 'b'), .5), COLOR.ts, () => smooth('wifi', (S.wifi || []).reduce((a, w) => a + (w.down || 0) + (w.up || 0), 0)), mid(s_('lan', 't'), s_('unifi', 'b')),
     r => { const rs = S.radios || []; return `<div class="tt">内网 ↔ UniFi AP</div><b>${fmt(r)} Mbps</b><br><span class="d">${(S.wifi || []).length} 个无线客户端${rs.map(x => ` · ${x.band} 利用率 ${x.util}%`).join('')}</span>`; });
 

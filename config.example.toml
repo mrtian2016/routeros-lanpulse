@@ -131,6 +131,16 @@ ing  = { x = 950, y = 230, w = 120, h = 18, gap = 24, name = "ingress / public",
 brg  = { x = 950, y = 340, w = 120, h = 18, gap = 24, name = "branch sites",     group = true }
 tsg  = { x = 950, y = 490, w = 120, h = 18, gap = 24, name = "tailnet",          group = true }
 
+# ── Bypass router / clash (optional) ────────────────────────────────────────
+# Live split-tunnel stats on the flow map, read straight from the mihomo (Clash
+# Meta) controller API on your bypass router. Shows the proxied rate, connection
+# counts (proxied vs direct) and the busiest rule groups on hover.
+[bypass]
+enabled = false
+api = "http://192.168.1.7:9090"    # mihomo external-controller address
+secret = ""                        # its `secret`, if you set one
+label = "旁路由"                   # node name on the map (any text)
+
 # ── Redaction ───────────────────────────────────────────────────────────────
 # Replaces public IPs, private IPs, MACs, domains, device names and site names
 # with deterministic pseudonyms in /api/state.json. Turn it on before you post

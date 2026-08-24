@@ -54,7 +54,10 @@
   svg.map .node .name { font-size: 11.5px; font-weight: 600; }
   svg.map .node .sub { font-size: 9.5px; fill: var(--text-muted); }
   svg.map .edge-bg { stroke: var(--line); stroke-width: 1; fill: none; }
-  svg.map .edge { fill: none; stroke-linecap: round; opacity: .95; }
+  svg.map .edge { fill: none; stroke-linecap: round; opacity: .95; pointer-events: none; }
+  svg.map .edge-bg { pointer-events: none; }
+  /* 悬停命中区: 不可见但比可见线宽得多, 空闲的细线也能停得住 */
+  svg.map .edge-hit { stroke: transparent; stroke-width: 14; fill: none; pointer-events: stroke; }
   svg.map .edge.idle { opacity: .18; }
   svg.map .elabel { font-size: 10px; fill: var(--text-secondary); font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px; }
   svg.map .peer rect { fill: var(--surface-2); stroke: var(--line); rx: 4; }

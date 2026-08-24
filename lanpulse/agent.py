@@ -53,6 +53,8 @@ def _load_cfg():
         "nas": merge("nas", {"enabled": False, "title": "NAS", "hint": ""}),
         "unifi": merge("unifi", {"enabled": False}),
         "netflow": merge("netflow", {"enabled": False, "url": "http://netflow:9133"}),
+        # 旁路由(mihomo/clash): 从它的控制器 API 读实时分流 —— 走代理的速率与连接数
+        "bypass": merge("bypass", {"enabled": False, "api": "", "secret": "", "label": "旁路由"}),
         "redact": merge("redact", {"enabled": False, "keep_subnet": True, "mask_hardware": False}),
         "events": merge("events", {"buffer": 200, "wan_burst_floor_mbps": 8, "device_burst_floor_mbps": 5,
                                    "ingress_burst_floor_mbps": 1, "ovpn_burst_floor_mbps": 3,
@@ -620,6 +622,9 @@ def set_change(key, cur, kind, add_fmt, del_fmt, limit=6):
     for x in list(set(cur) - was)[:limit]: ev(kind, add_fmt(x))
     for x in list(was - set(cur))[:limit]: ev(kind, del_fmt(x))
 
+_bypass_ok = {"ok": True}
+
+
 def collect():
     st = {"ts": int(time.time()), "ready": True}
     R = "[1m]"
@@ -875,6 +880,36 @@ def collect():
         "raid": [{"name": m.get("raid", "?"), "ok": v == 1} for m, v in q("synology_raid_status")],
         "model": next((m.get("model", "") for m, _ in q("synology_system_info")), ""),
     }
+    # ---- 旁路由 (mihomo 控制器): 实时分流 ----
+    byp = CFG["bypass"]
+    if byp.get("enabled") and byp.get("api"):
+        try:
+            req = urllib.request.Request(byp["api"].rstrip("/") + "/connections")
+            if byp.get("secret"):
+                req.add_header("Authorization", "Bearer " + byp["secret"])
+            with urllib.request.urlopen(req, timeout=4) as r:
+                cj = json.loads(r.read().decode())
+            now_b = time.time()
+            conns = cj.get("connections") or []
+            # chains[0] 是实际出口: "DIRECT" = mihomo 里的直连规则, 其余 = 走了代理
+            proxied = [c for c in conns if (c.get("chains") or ["?"])[0] != "DIRECT"]
+            outs = {}
+            for c in proxied:
+                grp = (c.get("chains") or ["?"])[-1]
+                outs[grp] = outs.get(grp, 0) + 1
+            st["bypass"] = {
+                "down": round(rate("byp_dl", cj.get("downloadTotal", 0), now_b), 3),
+                "up": round(rate("byp_ul", cj.get("uploadTotal", 0), now_b), 3),
+                "conns": len(conns), "proxied": len(proxied),
+                "direct": len(conns) - len(proxied),
+                "groups": sorted(outs.items(), key=lambda kv: -kv[1])[:4],
+            }
+            _bypass_ok["ok"] = True
+        except Exception:
+            st["bypass"] = {"down": 0, "up": 0, "conns": 0, "proxied": 0,
+                            "direct": 0, "groups": [], "stale": True}
+            _bypass_ok["ok"] = False
+
     # ---- NetFlow: 每设备去向 (IP -> 设备名) ----
     try:
         with urllib.request.urlopen(CFG["netflow"]["url"] + "/api/flows.json", timeout=6) as r:
@@ -1168,10 +1203,12 @@ def ui_config():
         "topology": CFG["topology"],
         "panels": {"router": bool(RT.get("enabled", True)), "edge": bool(ED.get("enabled")),
                    "pve": bool(PV.get("enabled")), "nas": bool(CFG["nas"].get("enabled")),
-                   "unifi": bool(CFG["unifi"].get("enabled")), "netflow": bool(CFG["netflow"].get("enabled"))},
+                   "unifi": bool(CFG["unifi"].get("enabled")), "netflow": bool(CFG["netflow"].get("enabled")),
+                   "bypass": bool(CFG["bypass"].get("enabled"))},
         "nas": {"title": CFG["nas"].get("title", "NAS"), "hint": CFG["nas"].get("hint", "")},
         "router": {"label": RT.get("label", "RouterOS")},
         "edge": {"label": ED.get("label", "edge")},
+        "bypass": {"label": CFG["bypass"].get("label", "旁路由")},
         "pve_mem_total": PV.get("memory_total_gb", 32),
         "hist_ranges": [{"k": k, "step": v[1], "win": v[2]} for k, v in HIST_RANGES.items()],
         "hist_default": DEFAULT_RANGE,
@@ -1296,6 +1333,11 @@ def health():
     for name, on, probe, hint, doc in opt:
         if on:
             add(bool(q(probe)), f"可选模块: {name}", hint, doc)
+
+    # 7. 旁路由 mihomo API
+    if CFG["bypass"].get("enabled"):
+        add(_bypass_ok.get("ok", True), "旁路由 mihomo API",
+            "连不上 mihomo 控制器 (bypass.api), 流向图上的分流节点会显示为断线", "")
 
     _health.update(ts=time.time(), items=out)
     return out

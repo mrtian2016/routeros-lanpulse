@@ -172,7 +172,11 @@
     "HTTPS 入口": "HTTPS ingress",
     "HTTPS/QUIC": "HTTPS/QUIC",
     "routeros-lanpulse · 设置": "routeros-lanpulse · Settings",
-    "这是静态演示站，没有运行中的 routeros-lanpulse 后端，所以设置页不可用。<br>部署之后（<code>docker compose up -d</code>）这里就是配置编辑器和告警开关。": "This is a static demo with no routeros-lanpulse backend running, so the settings page is unavailable.<br>Once deployed (<code>docker compose up -d</code>), this is where the config editor and alert switches live."
+    "这是静态演示站，没有运行中的 routeros-lanpulse 后端，所以设置页不可用。<br>部署之后（<code>docker compose up -d</code>）这里就是配置编辑器和告警开关。": "This is a static demo with no routeros-lanpulse backend running, so the settings page is unavailable.<br>Once deployed (<code>docker compose up -d</code>), this is where the config editor and alert switches live.",
+    "旁路由": "Bypass",
+    "内网 → 旁路由 · fake-ip 分流": "LAN → bypass · fake-ip split tunnel",
+    "{n} 条连接 · 代理 {p} · 直连 {d}": "{n} connections · {p} proxied · {d} direct",
+    "mihomo API 不可达": "mihomo API unreachable"
   },
   "events": [
     [
@@ -458,6 +462,14 @@
     [
       "告警测试 —— 看到这条说明通道是通的",
       "alert test — if you can read this, the channel works"
+    ],
+    [
+      "旁路由 mihomo API",
+      "Bypass router mihomo API"
+    ],
+    [
+      "连不上 mihomo 控制器 (bypass.api), 流向图上的分流节点会显示为断线",
+      "Cannot reach the mihomo controller (bypass.api); the split-tunnel node on the flow map will show as down"
     ]
   ]
 }
