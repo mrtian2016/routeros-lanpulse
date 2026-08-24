@@ -64,7 +64,12 @@
   svg.map .peer .name { font-size: 10px; }
   svg.map .peer .sub { font-size: 9px; fill: var(--text-muted); }
   svg.map .dot { r: 3.2; }
-  .feed { list-style: none; margin: 0; padding: 0; max-height: 520px; overflow: auto; font-size: 12px; }
+  /* 长列表面板: 列表自身不参与撑高(height:0), 只填满由同行更高面板决定的行高;
+     滚动条隐藏但仍可滚 (Firefox: scrollbar-width, WebKit: ::-webkit-scrollbar) */
+  #p-events, #p-lan { display: flex; flex-direction: column; }
+  .feed { list-style: none; margin: 0; padding: 0; font-size: 12px;
+          flex: 1 1 auto; height: 0; min-height: 320px; overflow-y: auto; scrollbar-width: none; }
+  .feed::-webkit-scrollbar, .tscroll::-webkit-scrollbar { display: none; }
   .feed li { display: grid; grid-template-columns: 52px 10px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); align-items: start; }
   .feed li .t { color: var(--text-muted); font-variant-numeric: tabular-nums; }
   .feed li .c { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; }
@@ -127,7 +132,8 @@
   /* --- 响应式: 表格独立横向滚动, 页面本身不横向滚动 --- */
   .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -2px; }
   /* overflow-y:auto 会让 overflow-x 隐式变成 auto, 冒出一条没用的横向滚动条 */
-  .tscroll { max-height: 340px; overflow-y: auto; overflow-x: hidden; }
+  .tscroll { flex: 1 1 auto; height: 0; min-height: 300px; overflow-y: auto; overflow-x: hidden;
+             scrollbar-width: none; }
   /* 设备名 + IP 分两行, 设备列吸收剩余宽度并省略超长部分, 否则数值列会被挤出面板 */
   #top-table { table-layout: fixed; width: 100%; }
   #top-table td:first-child { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
