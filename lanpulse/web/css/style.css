@@ -169,7 +169,7 @@
     #wifi-table th:nth-child(6), #wifi-table td:nth-child(6),
     #wg-table th:nth-child(6), #wg-table td:nth-child(6),
     #br-table th:nth-child(6), #br-table td:nth-child(6),
-    #vm-table th:nth-child(5), #vm-table td:nth-child(5) { display: none; }
+    #vm-table th:nth-child(4), #vm-table td:nth-child(4) { display: none; }
   }
 
   /* 首屏自检 */

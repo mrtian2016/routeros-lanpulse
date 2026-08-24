@@ -58,6 +58,14 @@ enabled = false
 instance = "192.168.1.10:9100"     # node_exporter on the hypervisor
 memory_total_gb = 32               # Denominator for the "guest memory used" bar
 
+# VM IP shown in the guest table. pve-exporter cannot report guest IPs (needs
+# guest-agent), so map them here by VMID or guest name. Names from hosts.by_ip
+# are matched automatically when they equal the guest name; use this for the
+# rest (e.g. PVE calls it "ros" but you named the host "RouterOS").
+[pve.vm_ip]
+# "101" = "192.168.1.1"
+# "123" = "192.168.1.8"
+
 # ── Hardware panels (0..n) ──────────────────────────────────────────────────
 # One [[hardware]] block per machine with a BMC. All commented out by default —
 # with no such machine you should not be looking at empty panels.

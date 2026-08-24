@@ -798,11 +798,21 @@ def collect():
     for expr, key in (("pve_cpu_usage_ratio", "cpu"), ("pve_memory_usage_bytes", "mem"), ("pve_memory_size_bytes", "memmax")):
         for m, v in q(f'{expr}{{id=~"qemu.*"}}'):
             if m["id"] in vms: vms[m["id"]][key] = v
+    # VM 的 IP: pve-exporter 不给 (要 guest-agent), 从 hosts.by_ip 反查 —— 用户
+    # 已经在那儿填过 IP->名字, 反过来按 VM 名匹配即可; 没配 hosts 就留空。
+    name2ip = {}
+    for ip_, nm_ in HOST_IP.items():
+        name2ip.setdefault(nm_.lower(), ip_)
+    # PVE 里的 VM 名(ros/monitor) 常和 hosts.by_ip 里的显示名(RouterOS/mon)对不上,
+    # 允许 [pve.vm_ip] 直接按 VMID 或 VM 名指定, 优先级最高
+    for vk, vip in (PV.get("vm_ip") or {}).items():
+        name2ip[str(vk).lower()] = vip
     for v in vms.values():
         v["cpu"] = round(v.get("cpu", 0) * 100, 1)
         v["mem"] = round(v.get("mem", 0) / 1073741824, 2)
         v["memmax"] = round(v.get("memmax", 0) / 1073741824, 1)
         v["name"] = v.get("name") or v["id"]          # 名字来自 pve_guest_info, 不写死
+        v["ip"] = name2ip.get(v["id"].lower()) or name2ip.get(v["name"].lower(), "")
     st["vms"] = sorted(vms.values(), key=lambda x: x["id"])
     # ---- 硬件 (IPMI + 宿主机) ----
     def hwinfo(inst):
