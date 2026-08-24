@@ -1,6 +1,6 @@
 <div align="center">
 
-# lanpulse
+# routeros-lanpulse
 
 **A live dashboard for MikroTik RouterOS**
 

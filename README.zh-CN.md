@@ -1,6 +1,6 @@
 <div align="center">
 
-# lanpulse
+# routeros-lanpulse
 
 **MikroTik RouterOS 的实时流量面板**
 
