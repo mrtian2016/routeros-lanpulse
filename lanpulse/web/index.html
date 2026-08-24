@@ -99,7 +99,11 @@
   </div>
   <div class="panel" id="p-netflow">
     <h2>设备去向 · NetFlow <span class="hint">近 5 分钟 · 带宽 = 流量</span></h2>
-    <svg class="sankey" id="sankey" viewBox="0 0 560 260"></svg>
+    <svg class="sankey" id="sankey"></svg>
+    <h2 class="subh">Top 会话 <span class="hint">近 5 分钟累计 · 设备 → 公网地址</span></h2>
+    <div class="tscroll"><table id="sess-table"><thead><tr>
+      <th>设备</th><th>目的地址</th><th class="num">端口</th><th class="num">流量</th>
+    </tr></thead><tbody></tbody></table></div>
   </div>
 </section>
 

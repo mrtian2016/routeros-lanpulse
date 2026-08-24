@@ -613,10 +613,34 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     skWrap.innerHTML = '';
     if (!f || !f.sources.length) { const tx = el('text', { x: 300, y: 120, class: 'sub' }, skWrap);
       tx.textContent = t(f ? '窗口内暂无流量样本…' : 'NetFlow 收集器未就绪'); return; }
-    // 坐标必须用 viewBox 的用户坐标系 (SVG 里写死了 viewBox), 不能用像素宽度
-    const vb = (skWrap.getAttribute('viewBox') || '0 0 560 260').split(/\s+/).map(Number);
-    const W = vb[2] || 560, Hh = vb[3] || 260, pad = 14, MINH = 8, narrow = innerWidth < 640, lab = narrow ? 70 : 132, L = lab, R = Math.max(lab + 60, W - lab - 6), cut = narrow ? 9 : 17;
-    const srcs = f.sources, dsts = f.dests.filter(d => f.links.some(l => l.dst === d.id));
+    // viewBox 跟随元素真实像素尺寸 (1 用户单位 = 1 CSS px), 宽面板下标签有地方展开
+    const W = Math.max(320, Math.round(skWrap.clientWidth || 560));
+    const Hh = Math.max(180, Math.round(skWrap.clientHeight || 300));
+    skWrap.setAttribute('viewBox', `0 0 ${W} ${Hh}`);
+    const pad = 14, MINH = 8, narrow = innerWidth < 640,
+          lab = narrow ? 70 : Math.min(200, Math.round(W * 0.24)),
+          L = lab, R = Math.max(lab + 60, W - lab - 6),
+          cut = narrow ? 9 : Math.max(12, Math.floor((lab - 46) / 6.5));
+    // 接近零的长尾分类各占一行只会挤出一堆 0.00 —— 收拢成"其余"
+    const squash = (rows, key, othersLabel) => {
+      const keep = rows.filter((x, i) => i < 6 && x.v >= 0.01);
+      const rest = rows.filter(x => !keep.includes(x));
+      if (rest.length < 2) return { rows: rows.slice(0, 8), remap: {} };
+      const remap = {};
+      rest.forEach(x => remap[x.id] = '__' + key);
+      keep.push({ id: '__' + key, label: othersLabel(rest.length), v: rest.reduce((a, x) => a + x.v, 0) });
+      return { rows: keep, remap };
+    };
+    const sq_s = squash(f.sources, 'os', n2 => t('其余 {n} 台', { n: n2 }));
+    const sq_d = squash(f.dests.filter(d => f.links.some(l => l.dst === d.id)), 'od', () => t('其余'));
+    const srcs = sq_s.rows, dsts = sq_d.rows;
+    // 链接按收拢后的端点重新聚合
+    const lagg = {};
+    f.links.forEach(l => {
+      const a2 = sq_s.remap[l.src] || l.src, b2 = sq_d.remap[l.dst] || l.dst;
+      lagg[a2 + '\u0000' + b2] = (lagg[a2 + '\u0000' + b2] || 0) + l.v;
+    });
+    const links = Object.entries(lagg).map(([k, v]) => { const [src, dst] = k.split('\u0000'); return { src, dst, v }; });
     const sTot = srcs.reduce((a, x) => a + x.v, 0) || 1, dTot = dsts.reduce((a, x) => a + x.v, 0) || 1;
     // 节点之间还有 GAP 的间隔, 分配高度时必须扣掉 —— 原来没扣, 5 个节点起总高就
     // 超出 viewBox(8 个溢出 14px), 上下被切掉。节点很多时 MINH 也要让步,
@@ -632,7 +656,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     let y = pad; const sp = {}; srcs.forEach(x => { const h = sf.minh + x.v * sScale; sp[x.id] = { y, h, off: 0 }; y += h + GAP; });
     y = pad; const dp = {}; const palette = [COLOR.wan, COLOR.proxy, COLOR.wg, COLOR.branch, COLOR.ts, COLOR.ovpn];
     dsts.forEach((x, i) => { const h = df.minh + x.v * dScale; dp[x.id] = { y, h, off: 0, c: palette[i % palette.length] }; y += h + GAP; });
-    f.links.forEach(l => {
+    links.forEach(l => {
       const a = sp[l.src], b = dp[l.dst]; if (!a || !b) return;
       const ha = Math.max(1, l.v * sScale), hb = Math.max(1, l.v * dScale);
       const y1 = a.y + a.off + ha / 2, y2 = b.y + b.off + hb / 2; a.off += ha; b.off += hb;
@@ -644,10 +668,19 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     const clip = s2 => s2.length > cut ? s2.slice(0, cut - 1) + '…' : s2;
     srcs.forEach(x => { el('rect', { x: L - 6, y: sp[x.id].y, width: 6, height: sp[x.id].h, fill: 'var(--text-muted)' }, skWrap);
       const tx = el('text', { x: L - 12, y: sp[x.id].y + sp[x.id].h / 2 + 3, 'text-anchor': 'end', class: 'sub' }, skWrap);
-      tx.textContent = `${clip(t(x.id))} ${fmt(x.v)}`; });
+      tx.textContent = `${clip(x.label || t(x.id))} ${fmt(x.v)}`; });
     dsts.forEach(x => { el('rect', { x: R, y: dp[x.id].y, width: 6, height: dp[x.id].h, fill: dp[x.id].c }, skWrap);
       const tx = el('text', { x: R + 12, y: dp[x.id].y + dp[x.id].h / 2 + 3, class: 'sub' }, skWrap);
-      tx.textContent = `${clip(t(x.id))} ${fmt(x.v)}`; });
+      tx.textContent = `${clip(x.label || t(x.id))} ${fmt(x.v)}`; });
+
+    // ---- Top 会话: NetFlow 里一直有但没上屏的精华 ----
+    const sb = document.querySelector('#sess-table tbody');
+    if (sb) {
+      const rows = (f.top || []).slice(0, 12);
+      sb.innerHTML = rows.length ? rows.map(r2 =>
+        `<tr><td>${H(r2.src)}</td><td>${H(r2.dst)}</td><td class="num">${H(String(r2.port))}</td><td class="num">${(+r2.mb).toFixed(1)} MB</td></tr>`).join('')
+        : `<tr><td colspan="4" class="sub">${t('窗口内暂无流量样本…')}</td></tr>`;
+    }
   }
 
   // ---------- 主循环 ----------

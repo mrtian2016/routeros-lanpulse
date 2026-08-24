@@ -181,7 +181,14 @@
     "走代理的终端": "Clients via proxy",
     "{n} 条连接走代理": "{n} proxied connections",
     "旁路由自身": "bypass itself",
-    "暂无": "none"
+    "暂无": "none",
+    "其余 {n} 台": "others ({n})",
+    "其余": "others",
+    "Top 会话": "Top sessions",
+    "近 5 分钟累计 · 设备 → 公网地址": "last 5 min totals · device → remote address",
+    "目的地址": "Destination",
+    "端口": "Port",
+    "流量": "Volume"
   },
   "events": [
     [
