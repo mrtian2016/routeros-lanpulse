@@ -119,6 +119,24 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   };
   const CURVE = (a, b, bend = .5) => { const mx = a.x + (b.x - a.x) * bend; return `M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}`; };
   const s_ = (n, k) => side(NODES[n], k);
+  let internetSubEl = null;
+  // "2d14h58m2s" -> "2天14小时58分" (不到秒)
+  const zhDur = raw => {
+    if (!raw) return '';
+    const g = u => { const m = new RegExp('(\\d+)' + u).exec(raw); return m ? +m[1] : 0; };
+    const d = g('d'), h = g('h'), mi = g('m');
+    let out = '';
+    if (d) out += d + t('天');
+    if (h) out += h + t('小时');
+    if (mi || !out) out += mi + t('分');
+    return out;
+  };
+  // 公网 IP 打码: 215.11.22.14 -> 215.***.***.14 ; v6 留头尾段
+  const maskIp = ip => {
+    if (!ip) return '';
+    if (ip.indexOf('.') >= 0) { const p2 = ip.split('.'); return p2.length === 4 ? `${p2[0]}.***.***.${p2[3]}` : ip; }
+    const p2 = ip.split(':').filter(Boolean); return p2.length > 2 ? `${p2[0]}:***:${p2[p2.length-1]}` : ip;
+  };
   const leftOf  = b => ({ x: b.x, y: b.y + b.h / 2 });
   const rightOf = b => ({ x: b.x + b.w, y: b.y + b.h / 2 });
   const mid = (a, b, dy = -7) => [(a.x + b.x) / 2, (a.y + b.y) / 2 + dy];
@@ -210,7 +228,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     const g = el('g', { class: cls + (n.core ? ' core' : '') }, nodesLayer);
     el('rect', { x: n.x, y: n.y, width: n.w, height: n.h }, g);
     const t = el('text', { x: n.x + n.w / 2, y: n.y + n.h / 2 - 2, 'text-anchor': 'middle', class: 'name' }, g); t.textContent = n.name;
-    if (n.sub) { const s2 = el('text', { x: n.x + n.w / 2, y: n.y + n.h / 2 + 12, 'text-anchor': 'middle', class: 'sub' }, g); s2.textContent = n.sub; }
+    if (n.sub) { const s2 = el('text', { x: n.x + n.w / 2, y: n.y + n.h / 2 + 12, 'text-anchor': 'middle', class: 'sub' }, g); s2.textContent = n.sub; g.subEl = s2; }
     return g;
   };
   const groupLabel = (x, y, text, color) => { const t = el('text', { x, y, class: 'elabel' }, nodesLayer); t.textContent = text; t.setAttribute('fill', color); };
@@ -233,12 +251,13 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     if (n.group) return;
     const g = drawNode(n);
     if (k === 'internet') {
+      internetSubEl = g.subEl;
       g.addEventListener('mousemove', ev2 => {
         const w = (S.fast && S.fast.wan) || S.wan || {};
         const gb = b => b ? (b / 1073741824).toFixed(1) + ' GB' : '0 GB';
         showTip(ev2, `<div class="tt">${H(n.name)}</div>`
-          + `<b>${H(w.ip || (S.wan && S.wan.ip) || t('未拨号'))}</b>`
-          + (w.uptime ? `<br><span class="d">${t('已连接')} ${H(w.uptime)}${w.peer ? ' · ' + t('对端') + ' ' + H(w.peer) : ''}</span>` : '')
+          + `<b>${H(maskIp(w.ip || (S.wan && S.wan.ip)) || t('未拨号'))}</b>`
+          + (w.uptime ? `<br><span class="d">${t('已连接')} ${H(zhDur(w.uptime))}</span>` : '')
           + `<br><span class="d">${t('累计')} ↓ ${gb(w.rx_total)} / ↑ ${gb(w.tx_total)}</span>`);
       });
       g.addEventListener('mouseleave', hideTip);
@@ -723,6 +742,10 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     branches.forEach(b => { const n = byId(S.branches, b.id); b.online = n.online; b.down = n.down || 0; b.up = n.up || 0; b.hist.push(b.online ? b.down + b.up : 0); b.hist.shift(); });
     const wd = wanD(), wu = wanU();
     wanMax = Math.max(wanMax, wd); wanUpMax = Math.max(wanUpMax, wu);
+    if (internetSubEl) {
+      const wip = (S.fast && S.fast.wan && S.fast.wan.ip) || (S.wan && S.wan.ip);
+      internetSubEl.textContent = wip ? maskIp(wip) : (NODES.internet && NODES.internet.sub) || '';
+    }
     document.getElementById('t-wan-down').innerHTML = `${fmt(wd)}<small>Mbps</small>`;
     document.getElementById('t-wan-up').innerHTML = `${fmt(wu)}<small>Mbps</small>`;
     document.getElementById('t-wan-down-d').textContent = t('峰值 {n} Mbps', { n: fmt(wanMax) });
