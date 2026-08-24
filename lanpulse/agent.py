@@ -623,6 +623,8 @@ def set_change(key, cur, kind, add_fmt, del_fmt, limit=6):
     for x in list(was - set(cur))[:limit]: ev(kind, del_fmt(x))
 
 _bypass_ok = {"ok": True}
+_byp_conn_prev = {}          # 连接 id -> (download, upload) 上一采样
+_byp_prev_ts = {"t": 0.0}
 
 
 def collect():
@@ -923,6 +925,26 @@ def collect():
                 cj = json.loads(r.read().decode())
             now_b = time.time()
             conns = cj.get("connections") or []
+            # 每来源速率按"连接 id 逐条差分"累加: docker pull 这类高频开合的场景下,
+            # 对来源累计和做差分会因连接关闭出现负增量而钳 0, 逐条差分只丢关闭前
+            # 最后一个采样间隔的字节。
+            dt_b = max(0.5, now_b - _byp_prev_ts["t"]) if _byp_prev_ts["t"] else 0
+            _byp_prev_ts["t"] = now_b
+            cur_ids = set()
+            src_delta = {}
+            for c in conns:
+                cid = c.get("id")
+                sip0 = (c.get("metadata") or {}).get("sourceIP") or "?"
+                dl0, ul0 = c.get("download") or 0, c.get("upload") or 0
+                cur_ids.add(cid)
+                pdl, pul = _byp_conn_prev.get(cid, (0, 0))
+                _byp_conn_prev[cid] = (dl0, ul0)
+                if dt_b:
+                    e0 = src_delta.setdefault(sip0, [0, 0])
+                    e0[0] += max(0, dl0 - pdl)
+                    e0[1] += max(0, ul0 - pul)
+            for gone in set(_byp_conn_prev) - cur_ids:
+                del _byp_conn_prev[gone]
             # chains[0] 是实际出口: "DIRECT" = mihomo 里的直连规则, 其余 = 走了代理
             proxied = [c for c in conns if (c.get("chains") or ["?"])[0] != "DIRECT"]
             outs, per_src = {}, {}
@@ -945,8 +967,9 @@ def collect():
                     sip_name_override = "旁路由自身"   # mihomo/MSF 自己的出网(更新规则集等)
                 else:
                     sip_name_override = None
-                rd = max(0.0, rate("byp_srcd_" + sip, dl, now_b))
-                ru = max(0.0, rate("byp_srcu_" + sip, ul, now_b))
+                sd = src_delta.get(sip, [0, 0])
+                rd = sd[0] * 8 / dt_b / 1e6 if dt_b else 0.0
+                ru = sd[1] * 8 / dt_b / 1e6 if dt_b else 0.0
                 nm_ = sip_name_override or dev_name(sip)
                 e = merged.setdefault(nm_, {"name": nm_, "conns": 0, "down": 0.0, "up": 0.0, "_nodes": {}})
                 e["conns"] += ncon
