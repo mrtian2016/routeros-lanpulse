@@ -121,7 +121,10 @@
   .util .lbl { font-size: 11px; color: var(--text-secondary); display: flex; justify-content: space-between; }
   .util .g { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; margin-top: 3px; }
   .util .g i { display: block; height: 100%; border-radius: 4px; }
-  svg.sankey { width: 100%; height: 260px; display: block; }
+  #p-netflow { display: flex; flex-direction: column; }
+  svg.sankey { width: 100%; height: 300px; display: block; flex: none; }
+  #p-netflow .tscroll { min-height: 90px; }     /* 这个面板的表是次要内容, 兜底矮一点 */
+  .subh { margin: 12px 0 4px; }
   svg.sankey text { font-family: inherit; font-size: 11px; fill: var(--text-primary); }
   svg.sankey .small { font-size: 10px; fill: var(--text-muted); }
   svg.sankey path.flow { fill-opacity: .45; stroke: none; transition: d .6s; }
