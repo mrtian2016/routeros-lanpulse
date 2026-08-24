@@ -105,12 +105,14 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
 
   const EDGES = [];
   const addEdge = (id, d, color, rateFn, labelAt, tipFn) => {
-    el('path', { d, class: 'edge-bg' }, edgesLayer);
+    const bg = el('path', { d, class: 'edge-bg' }, edgesLayer);
     const p = el('path', { d, class: 'edge', stroke: color, 'stroke-width': 2, 'stroke-dasharray': '6 8' }, edgesLayer);
     const t = el('text', { x: labelAt[0], y: labelAt[1], class: 'elabel', 'text-anchor': 'middle' }, edgesLayer);
-    const e = { id, p, t, rateFn, off: 0, color };
     // 可见线只有 1-6px, 空闲边基本悬停不到 —— 命中区用一条 14px 的透明副本承担
     const hit = el('path', { d, class: 'edge-hit' }, edgesLayer);
+    const e = { id, p, t, bg, hit, rateFn, off: 0, color,
+                // 空槽位的边要整体藏起来 (节点 opacity=0 时线还在会露马脚)
+                show(on) { for (const el2 of [bg, p, hit]) el2.setAttribute('visibility', on ? 'visible' : 'hidden'); } };
     hit.addEventListener('mousemove', ev => showTip(ev, tipFn(e.last || 0)));
     hit.addEventListener('mouseleave', hideTip);
     EDGES.push(e); return e;
@@ -190,7 +192,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     }
     BYP_TOP = Array.from({ length: 4 }, (_, i) => ({ i, name: '', down: 0, up: 0, conns: 0, node: slot('bypg', i) }));
     BYP_TOP.forEach(d => {
-      addEdge('bt-' + d.i, CURVE(s_('byp', 'r'), leftOf(d.node), .55), COLOR.proxy,
+      d.edge = addEdge('bt-' + d.i, CURVE(s_('byp', 'r'), leftOf(d.node), .55), COLOR.proxy,
         () => d.name ? smooth('bt' + d.i, d.down + d.up) : 0, [0, 0],
         () => d.name
           ? `<div class="tt">${H(d.name)} → ${t('旁路由')}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps<br><span class="d">${t('{n} 条连接走代理', { n: d.conns })}</span>`
@@ -198,7 +200,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     });
   }
   LAN_TOP.forEach(d => {
-    addEdge('lt-' + d.i, CURVE(s_('lan', 'r'), leftOf(d.node), .5),
+    d.edge = addEdge('lt-' + d.i, CURVE(s_('lan', 'r'), leftOf(d.node), .5),
       COLOR.wan, () => d.name ? smooth('lt' + d.i, d.down + d.up) : 0, [0, 0],
       () => d.name ? `<div class="tt">${H(d.name)}</div><b>↓ ${fmt(d.down)}</b> / <b>↑ ${fmt(d.up)}</b> Mbps`
                    : `<span class="d">${t('暂无数据')}</span>`);
@@ -678,18 +680,28 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
       const src = lanDevs[i];
       d.name = src ? src.name : ''; d.down = src ? src.down : 0; d.up = src ? src.up : 0;
       d.g.setAttribute('opacity', src ? 1 : 0);
+      if (d.edge) d.edge.show(!!src);
       if (!src) return;
       const nm = fitLabel(d.name, d.node.w - 42);   // 右侧速率列占掉一块
       if (d.nameEl.textContent !== nm) d.nameEl.textContent = nm;
       d.rateEl.textContent = fmt(d.down + d.up);
     });
-    // 走代理的终端槽位
+    // 走代理的终端槽位。没人走代理时留一个"暂无"占位, 别让这条带凭空消失
     const bsrc = ((S.bypass && S.bypass.sources) || []);
     BYP_TOP.forEach((d, i) => {
       const src = bsrc[i];
+      const placeholder = !src && i === 0 && bsrc.length === 0;
       d.name = src ? src.name : ''; d.down = src ? (src.down || 0) : 0;
       d.up = src ? (src.up || 0) : 0; d.conns = src ? src.conns : 0;
+      if (placeholder) {
+        d.g.setAttribute('opacity', 0.5);
+        if (d.edge) d.edge.show(true);
+        if (d.nameEl.textContent !== t('暂无')) d.nameEl.textContent = t('暂无');
+        d.rateEl.textContent = '—';
+        return;
+      }
       d.g.setAttribute('opacity', src ? 1 : 0);
+      if (d.edge) d.edge.show(!!src);
       if (!src) return;
       const nm = fitLabel(d.name, d.node.w - 40);
       if (d.nameEl.textContent !== nm) d.nameEl.textContent = nm;

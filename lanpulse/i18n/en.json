@@ -180,7 +180,8 @@
     "{n} 条": "{n} conns",
     "走代理的终端": "Clients via proxy",
     "{n} 条连接走代理": "{n} proxied connections",
-    "旁路由自身": "bypass itself"
+    "旁路由自身": "bypass itself",
+    "暂无": "none"
   },
   "events": [
     [
