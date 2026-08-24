@@ -136,7 +136,8 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
         let h = `<div class="tt">${t('内网 → 旁路由 · fake-ip 分流')}</div>`
           + `<b>↓ ${fmt(b.down || 0)}</b> / <b>↑ ${fmt(b.up || 0)}</b> Mbps`
           + `<br><span class="d">${t('{n} 条连接 · 代理 {p} · 直连 {d}', { n: b.conns || 0, p: b.proxied || 0, d: b.direct || 0 })}</span>`;
-        for (const g of (b.groups || [])) h += `<br><span class="d">${H(g[0])} · ${g[1]}</span>`;
+        for (const sc of (b.sources || [])) h += `<br><span class="d">${H(sc.name)} · ${t('{n} 条', { n: sc.conns })} · ${fmt(sc.rate)} Mbps</span>`;
+        for (const g of (b.groups || [])) h += `<br><span class="d">→ ${H(g[0])} · ${g[1]}</span>`;
         return h;
       });
   }

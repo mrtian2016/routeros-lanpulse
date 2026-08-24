@@ -880,6 +880,14 @@ def collect():
         "raid": [{"name": m.get("raid", "?"), "ok": v == 1} for m, v in q("synology_raid_status")],
         "model": next((m.get("model", "") for m, _ in q("synology_system_info")), ""),
     }
+    # ---- IP -> 设备名 (DHCP 租约 + 配置静态映射), 旁路由与 NetFlow 共用 ----
+    ip_names = {}
+    for m, _ in q("mktxp_dhcp_lease_info"):
+        _ip = m.get("address") or m.get("ip_address")
+        if _ip:
+            ip_names[_ip] = m.get("host_name") or m.get("comment") or _ip
+    ip_names.update(HOST_IP)
+
     # ---- 旁路由 (mihomo 控制器): 实时分流 ----
     byp = CFG["bypass"]
     if byp.get("enabled") and byp.get("api"):
@@ -893,11 +901,23 @@ def collect():
             conns = cj.get("connections") or []
             # chains[0] 是实际出口: "DIRECT" = mihomo 里的直连规则, 其余 = 走了代理
             proxied = [c for c in conns if (c.get("chains") or ["?"])[0] != "DIRECT"]
-            outs = {}
+            outs, per_src = {}, {}
             for c in proxied:
                 grp = (c.get("chains") or ["?"])[-1]
                 outs[grp] = outs.get(grp, 0) + 1
+                sip = (c.get("metadata") or {}).get("sourceIP") or "?"
+                e = per_src.setdefault(sip, [0, 0])
+                e[0] += 1
+                e[1] += (c.get("download") or 0) + (c.get("upload") or 0)
+            # 每来源速率: 对该来源全部连接的累计字节做增量; 连接关闭时和会回退, rate() 对负增量返 0
+            srcs = []
+            for sip, (ncon, tot) in per_src.items():
+                r_s = rate("byp_src_" + sip, tot, now_b)
+                srcs.append({"name": ip_names.get(sip, sip), "conns": ncon,
+                             "rate": round(max(0.0, r_s), 2)})
+            srcs.sort(key=lambda x: (-x["rate"], -x["conns"]))
             st["bypass"] = {
+                "sources": srcs[:5],
                 "down": round(rate("byp_dl", cj.get("downloadTotal", 0), now_b), 3),
                 "up": round(rate("byp_ul", cj.get("uploadTotal", 0), now_b), 3),
                 "conns": len(conns), "proxied": len(proxied),
@@ -907,20 +927,14 @@ def collect():
             _bypass_ok["ok"] = True
         except Exception:
             st["bypass"] = {"down": 0, "up": 0, "conns": 0, "proxied": 0,
-                            "direct": 0, "groups": [], "stale": True}
+                            "direct": 0, "groups": [], "sources": [], "stale": True}
             _bypass_ok["ok"] = False
 
     # ---- NetFlow: 每设备去向 (IP -> 设备名) ----
     try:
         with urllib.request.urlopen(CFG["netflow"]["url"] + "/api/flows.json", timeout=6) as r:
             fl = json.loads(r.read().decode())
-        names = {}
-        for m, _ in q("mktxp_dhcp_lease_info"):
-            ip = m.get("address") or m.get("ip_address")
-            if ip: names[ip] = m.get("host_name") or m.get("comment") or ip
-        # 静态 IP 设备(无 DHCP 租约)的名字: 来自 compose 的 STATIC_HOSTS, 不在代码里写死
-        names.update(HOST_IP)
-        nm = lambda ip: names.get(ip, ip)
+        nm = lambda ip: ip_names.get(ip, ip)   # 名字表在上面和旁路由共用一份
         # 同名设备(多网卡/多 IP)合并
         agg_s, agg_l = {}, {}
         for x in fl.get("sources", []):
