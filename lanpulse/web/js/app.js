@@ -105,6 +105,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
 
   const EDGES = [];
   const addEdge = (id, d, color, rateFn, labelAt, tipFn) => {
+    if (!d) return null;                       // 端点节点被用户从拓扑删了: 这条边不存在
     const bg = el('path', { d, class: 'edge-bg' }, edgesLayer);
     const p = el('path', { d, class: 'edge', stroke: color, 'stroke-width': 2, 'stroke-dasharray': '6 8' }, edgesLayer);
     const t = el('text', { x: labelAt[0], y: labelAt[1], class: 'elabel', 'text-anchor': 'middle' }, edgesLayer);
@@ -117,8 +118,10 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
     hit.addEventListener('mouseleave', hideTip);
     EDGES.push(e); return e;
   };
-  const CURVE = (a, b, bend = .5) => { const mx = a.x + (b.x - a.x) * bend; return `M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}`; };
-  const s_ = (n, k) => { const node = NODES[n]; return node ? side(node, k) : {x: 0, y: 0}; };
+  const CURVE = (a, b, bend = .5) => { if (!a || !b) return null; const mx = a.x + (b.x - a.x) * bend; return `M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}`; };
+  // 拓扑里删掉的节点: s_ 返回 null -> CURVE 返回 null -> addEdge 直接不建这条边,
+  // 兑现 config.example 的承诺"删掉节点, 连它的线也消失" (thanks @liuhu8207, #1)
+  const s_ = (n, k) => { const node = NODES[n]; return node ? side(node, k) : null; };
   let internetSubEl = null;
   // "2d14h58m2s" -> "2天14小时58分" (不到秒)
   const zhDur = raw => {
@@ -139,7 +142,7 @@ const setText = (id, v) => { const e = document.getElementById(id); if (e) e.tex
   };
   const leftOf  = b => ({ x: b.x, y: b.y + b.h / 2 });
   const rightOf = b => ({ x: b.x + b.w, y: b.y + b.h / 2 });
-  const mid = (a, b, dy = -7) => [(a.x + b.x) / 2, (a.y + b.y) / 2 + dy];
+  const mid = (a, b, dy = -7) => (!a || !b) ? [0, 0] : [(a.x + b.x) / 2, (a.y + b.y) / 2 + dy];
 
   addEdge('wan', CURVE(s_('internet', 'r'), s_('ros', 'l')), COLOR.wan, () => smooth('wan', wanD() + wanU()), mid(s_('internet', 'r'), s_('ros', 'l')),
     () => `<div class="tt">Internet ↔ RouterOS (PPPoE)</div><b>↓ ${fmt(wanD())}</b> / <b>↑ ${fmt(wanU())}</b> Mbps<br><span class="d">${S.wan && S.wan.online ? '已连接' : '离线'}${S.wan && S.wan.ip ? ' · ' + S.wan.ip : ''}</span>`);
